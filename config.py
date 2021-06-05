@@ -1,0 +1,18 @@
+#=========================-------------------------------=============================
+#=========================| CHARTIFY CONFIGURATION FILE |=============================
+#=========================-------------------------------=============================
+#Author : Shaikh Aquib 
+#Date : June 2021
+
+title = "Chartify"
+
+# ====== HEIGHTS AND WIDTHS =============
+window_size = (1280, 650) # Main window
+sheetf_width  = 1280 # Spreadsheet Frame
+sheetf_height = 600
+
+# =========== CO-ORDINATES ==============
+sheetf_coords = (0, 30) # Spreadsheet Coords
+
+
+
