@@ -1,3 +1,6 @@
+#Author : Shaikh Aquib
+#Date : June 2021
+
 import tkinter as tk
 from tkinter import ttk
 
@@ -18,13 +21,8 @@ class Spreadsheet(ttk.Treeview):
     set_columns(columns:tuple)
         sets the columns for spreadsheet.
 
-    display()
-        displays the spreadsheet on root window.
-
     add_rows(data:list)
         adds data to the spreadsheet.
-
-    
     """
     
     def __init__(self, master=None):
@@ -32,15 +30,31 @@ class Spreadsheet(ttk.Treeview):
         Parameters
         ----------
         master : tkinter.Tk, optional
-            root window where spreadsheet will be displayed
+            root widget where spreadsheet will be displayed
         """
         
         super().__init__(master)
 
         # Set theme for spreadsheet
         self.style = ttk.Style(master)
-        self.theme = 'winnative'
+        self.theme = 'clam'
         self.style.theme_use(self.theme)
+
+        self.verscrlbar = ttk.Scrollbar(master, 
+                           orient ="vertical", 
+                           command = self.yview)
+        self.verscrlbar.pack(side ='right', fill ='y')
+
+        self.horscrlbar = ttk.Scrollbar(master, 
+                           orient ="horizontal", 
+                           command = self.xview)
+        self.horscrlbar.pack(side ='bottom', fill ='x')
+
+        self.configure(
+            yscrollcommand = self.verscrlbar.set,
+            xscrollcommand = self.horscrlbar.set
+        )
+
 
 
     def get_available_themes(self) -> tuple:
@@ -76,7 +90,7 @@ class Spreadsheet(ttk.Treeview):
         self['columns'] = columns
         self['show'] = 'headings'
         for i in range(0, len(columns)):
-            self.column(columns[i], width=100, minwidth=100, anchor=tk.CENTER)
+            self.column(columns[i], width=300, minwidth=100, anchor=tk.CENTER)
             self.heading(columns[i], text=columns[i])
             
 
@@ -92,8 +106,3 @@ class Spreadsheet(ttk.Treeview):
         for i in range(0, len(rows)):
             self.insert("", 'end', values=rows[i])
 
-
-    def display(self):
-        """Packs the spreadsheet to display it on parent window."""
-
-        self.pack()
