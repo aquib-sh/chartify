@@ -1,6 +1,7 @@
+import sys
+sys.path.append('../')
 import tkinter as tk
-from 3D-Charts.layout import spreadsheet
-#from layout import spreadsheet
+from chartify.layouts import spreadsheet
 
 root = tk.Tk()
 
@@ -15,3 +16,4 @@ data = [
 sheet.set_columns(cols)
 sheet.add_rows(data)
 sheet.display()
+root.mainloop()
