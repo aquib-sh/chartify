@@ -8,6 +8,7 @@ title = "Chartify"
 
 # ====== HEIGHTS AND WIDTHS =============
 window_size = (1280, 650) # Main window
+insert_window_size = (300, 200) # Insert window
 sheetf_width  = 1280 # Spreadsheet Frame
 sheetf_height = 600
 
