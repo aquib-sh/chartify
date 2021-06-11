@@ -8,9 +8,7 @@ class MenuBar(tk.Menu):
     """ MenuBar
 
     MenuBar containing other menus and submenus
-
     """
-
     def __init__(self, master:tk.Tk):
         """
         Parameters
@@ -22,6 +20,7 @@ class MenuBar(tk.Menu):
             Label of the current menubar
         """
         super().__init__(master)
+        self.master = master
 
         # Add the first 3 menus
         filemenu  = tk.Menu(self, tearoff=0)
@@ -45,7 +44,7 @@ class MenuBar(tk.Menu):
 
         # Row, column options for insert, delete and clear
         insertmenu.add_command(label="Row", command=None)
-        insertmenu.add_command(label="Column", command=None)
+        insertmenu.add_command(label="Column", command=self.master.insert_new_column)
         
         deletemenu.add_command(label="Row", command=None)
         deletemenu.add_command(label="Column", command=None)
@@ -53,15 +52,15 @@ class MenuBar(tk.Menu):
         clearmenu.add_command(label="Row", command=None)
         clearmenu.add_command(label="Column", command=None)
 
-        filemenu.add_command(label="Open", command=None)
-        filemenu.add_command(label="Save", command=None)
+        filemenu.add_command(label="Open", command=self.master.open_file)
+        filemenu.add_command(label="Save", command=self.master.save_file)
         
         draw_chart_menu = tk.Menu(chartmenu, tearoff=0)
         chartmenu.add_cascade(label="Draw Chart", menu=draw_chart_menu)
         
         draw_chart_menu.add_command(label="Select Columns", command=None)
         draw_chart_menu.add_command(label="Refresh", command=None)
-        
 
 
-    
+
+
