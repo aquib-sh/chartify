@@ -24,7 +24,6 @@ class Spreadsheet(ttk.Treeview):
     add_rows(data:list)
         adds data to the spreadsheet.
     """
-    
     def __init__(self, master=None):
         """
         Parameters
@@ -32,7 +31,6 @@ class Spreadsheet(ttk.Treeview):
         master : tkinter.Tk, optional
             root widget where spreadsheet will be displayed
         """
-        
         super().__init__(master)
 
         # Set theme for spreadsheet
@@ -71,7 +69,6 @@ class Spreadsheet(ttk.Treeview):
         theme_name : str
             name of the theme to be used.
         """
-
         available_themes = self.style.theme_names()
         if theme_name in available_themes:
             self.style.theme_use(theme_name)
@@ -86,7 +83,6 @@ class Spreadsheet(ttk.Treeview):
         columns : tuple
             columns of spreadsheet
         """
-
         self['columns'] = columns
         self['show'] = 'headings'
         for i in range(0, len(columns)):
@@ -102,7 +98,33 @@ class Spreadsheet(ttk.Treeview):
         rows : list[tuple, tuple, tuple...]
             list of tuples containing the data for rows
         """
-
         for i in range(0, len(rows)):
             self.insert("", 'end', values=rows[i])
 
+
+    def clear_sheet(self):
+        """Clears up everything on the sheet."""
+        for item in self.get_children():
+            self.delete(item)
+
+
+    def insert_column(self, column_name:str):
+        """Inserts a column into spreadsheet.
+
+        Parameters
+        ----------
+        column_name : str
+            Name of the column to be added.
+        """
+        new_column_list = []
+        for i in range(0, len(self['columns'])):
+            new_column_list.append(self['columns'][i])
+        new_column_list.append(column_name)
+        new_column_tup = tuple(new_column_list)
+
+        # Update the column names
+        self.set_columns(new_column_tup)
+
+        return new_column_tup
+
+    
