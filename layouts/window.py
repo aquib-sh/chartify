@@ -6,8 +6,6 @@ import tkinter as tk
 from tkinter import ttk
 from tkinter.constants import BOTTOM, CENTER, LEFT
 sys.path.append('../')
-from chartify.config import title
-
 
 class Application(tk.Tk):
     """A class for main window of the application.
@@ -19,12 +17,15 @@ class Application(tk.Tk):
 
     """
         
-    def __init__(self, size:tuple):
+    def __init__(self, title:str, size:tuple):
         """
         Parameters
         ----------
+        title : str
+            Title of the window
+
         size : tuple
-            size of window (x:int, y:int) where x is width and y is height.
+            Size of window (x:int, y:int) where x is width and y is height.
         """
         super().__init__()
         self.geometry(f"{size[0]}x{size[1]}")
