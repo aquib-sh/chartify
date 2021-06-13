@@ -54,11 +54,9 @@ class Spreadsheet(ttk.Treeview):
         )
 
 
-
     def get_available_themes(self) -> tuple:
         """Returns available theme names on system."""
         return self.style.theme_names()
-
 
 
     def set_theme(self, theme_name:str):
@@ -72,7 +70,6 @@ class Spreadsheet(ttk.Treeview):
         available_themes = self.style.theme_names()
         if theme_name in available_themes:
             self.style.theme_use(theme_name)
-            
 
 
     def set_columns(self, columns:tuple):
@@ -127,4 +124,22 @@ class Spreadsheet(ttk.Treeview):
 
         return new_column_tup
 
-    
+
+    def delete_column(self, column_name:str):
+        """Deletes a column from spreadsheet.
+
+        Parameters
+        ----------
+        column_name : str
+            Name of the column to be deleted.
+        """
+        new_column_list = []
+        for i in range(0, len(self['columns'])):
+            if self['columns'][i] != column_name:
+                new_column_list.append(self['columns'][i])
+        new_column_tup = tuple(new_column_list)
+
+        # Update the column names
+        self.set_columns(new_column_tup)
+
+        return new_column_tup
