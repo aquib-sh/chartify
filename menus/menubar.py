@@ -47,7 +47,7 @@ class MenuBar(tk.Menu):
         insertmenu.add_command(label="Column", command=self.master.insert_new_column)
         
         deletemenu.add_command(label="Row", command=None)
-        deletemenu.add_command(label="Column", command=None)
+        deletemenu.add_command(label="Column", command=self.master.delete_column)
 
         clearmenu.add_command(label="Row", command=None)
         clearmenu.add_command(label="Column", command=None)
@@ -58,7 +58,7 @@ class MenuBar(tk.Menu):
         draw_chart_menu = tk.Menu(chartmenu, tearoff=0)
         chartmenu.add_cascade(label="Draw Chart", menu=draw_chart_menu)
         
-        draw_chart_menu.add_command(label="Select Columns", command=None)
+        draw_chart_menu.add_command(label="Select Columns", command=self.master.build_chart)
         draw_chart_menu.add_command(label="Refresh", command=None)
 
 
