@@ -123,23 +123,3 @@ class Spreadsheet(ttk.Treeview):
         self.set_columns(new_column_tup)
 
         return new_column_tup
-
-
-    def delete_column(self, column_name:str):
-        """Deletes a column from spreadsheet.
-
-        Parameters
-        ----------
-        column_name : str
-            Name of the column to be deleted.
-        """
-        new_column_list = []
-        for i in range(0, len(self['columns'])):
-            if self['columns'][i] != column_name:
-                new_column_list.append(self['columns'][i])
-        new_column_tup = tuple(new_column_list)
-
-        # Update the column names
-        self.set_columns(new_column_tup)
-
-        return new_column_tup
