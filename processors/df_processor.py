@@ -1,6 +1,7 @@
 import sys
 sys.path.append("../")
 import pandas
+import numpy
 from chartify.processors.processor import DataProcessor
 
 class DataFrameProcessor(DataProcessor):
@@ -24,3 +25,9 @@ class DataFrameProcessor(DataProcessor):
             row = self.df.iloc[i]
             data.append(tuple(row))
         return data
+
+    def add_new_column(self, column):
+        self.df[column] = numpy.nan
+
+    def delete_column(self, column):
+        del self.df[column]
