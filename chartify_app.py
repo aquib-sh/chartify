@@ -124,8 +124,15 @@ class ChartifyApp(Application):
         delete_window.update_dropdown(self.processor.get_columns())
         delete_window.start()
         col_to_delete = self.adapter.get(adapter_key).strip()
-        self.sheet.delete_column(col_to_delete)
         self.processor.delete_column(col_to_delete)
+
+        cols = self.processor.get_columns()
+        data = self.processor.get_data()
+
+        # Add the updated data to spreadsheet
+        self.sheet.clear_sheet()
+        self.sheet.set_columns(cols)
+        self.sheet.add_rows(data)
 
 
     def save_file(self):
