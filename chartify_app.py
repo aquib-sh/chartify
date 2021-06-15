@@ -1,8 +1,6 @@
 import sys
 sys.path.append('../')
-import asyncio
 import threading
-import multiprocessing
 import tkinter.filedialog as fd
 from tkinter.constants import *
 from chartify.layouts.window import Application
