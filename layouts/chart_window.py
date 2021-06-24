@@ -48,7 +48,7 @@ class ChartWindow(TopLevelWindow):
         self.n3 = tk.StringVar()
         self.n4 = tk.StringVar()
 
-        # Create 4 Dropdowns for choice of 4 points
+        # ============== Create 4 Dropdowns for choice of 4 points ========================
         self.choice1 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1)
         self.choice2 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2)
         self.choice3 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3)
@@ -59,10 +59,36 @@ class ChartWindow(TopLevelWindow):
         self.choice3.grid(row=3, column=1)
         self.choice4.grid(row=4, column=1)
 
+        # ====================== Create Dropdown for Y-Column =============================
+        self.n5 = tk.StringVar()
+        # Format of the data choice in dtype_y1 (choose 1 of 3)
+        self.dtype_y1 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n5)
+        self.dtype_y1['values'] = ('Number',
+                                   'Time(yyyy-mm-dd hh:mm:ss)',
+                                   'Time(dd/mm/yyyyy hh:mm:ss)',
+                                   )
+        self.dtype_y1.current(0)
+
+        # ===================== Create Dropdown for Y-Duration =============================
+        self.n6 = tk.StringVar()
+        # Format of the data choice in dtype_y2 (choose 1 of 4):
+        self.dtype_y2 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n6)
+        self.dtype_y2['values'] = ('Number',
+                                   'Week',
+                                   'Day',
+                                   'Hour',
+                                   'Minute',
+                                   'Second',
+                                   )
+        self.dtype_y2.current(0)
+
+        self.dtype_y1.grid(row=3, column=2)
+        self.dtype_y2.grid(row=4, column=2)
+
         self.dropdowns = (self.choice1, self.choice2, self.choice3, self.choice4)
         self.text_vars = (self.n1, self.n2, self.n3, self.n4)
 
-        build_btn = Button(self, text="BUILD", command=self.transfer_value_and_destroy)
+        build_btn = ttk.Button(self, text="BUILD", command=self.transfer_value_and_destroy)
         Label(self, text="").grid(row=5, column=1)
         build_btn.grid(row=6, column=1, padx=(200, 100))
 
