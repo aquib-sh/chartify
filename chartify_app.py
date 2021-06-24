@@ -9,6 +9,9 @@ from chartify.layouts.frame import WindowFrame
 from chartify.layouts.insert_window import InsertWindow
 from chartify.layouts.delete_window import DeleteWindow
 from chartify.layouts.chart_window import ChartWindow
+from chartify.layouts.collision_settings_window import CollisionSettings
+from chartify.layouts.collision_report_window import CollisionReport
+from chartify.tools.collision_detector import CollisionDetector
 from chartify.processors.csv_processor import CSVProcessor
 from chartify.processors.xlsx_processor import XLSXProcessor
 from chartify.processors.data_adapter import DataAdapter
@@ -141,9 +144,50 @@ class ChartifyApp(Application):
 
     def build_chart(self):
         """Opens up Chart Window and builds chart after selecting columns."""
-        self.chart_win = ChartWindow(adapter=self.adapter, title="Choice of columns for 3D chart", size=config.build_chart_window_size)
+        self.chart_win = ChartWindow(adapter=self.adapter,
+                                     title="Choice of columns for 3D chart",
+                                     size=config.build_chart_window_size)
         self.chart_win.update_dropdown(self.processor.get_columns())
         self.chart_win.start()
+
+
+    def detect_collision(self):
+        """Detects collision between objects due to time collisions."""
+        self.coll_set_win = CollisionSettings(adapter=self.adapter,
+                                              title="Collision Detector Settings",
+                                              size=config.collision_settings_window_size)
+        self.coll_set_win.update_dropdown(self.processor.get_columns())
+        self.coll_set_win.start()
+
+        time_start_col = self.adapter.get("cd_dropdown_choice0")
+        time_end_col   = self.adapter.get("cd_dropdown_choice1")
+        coll_space_col = self.adapter.get("cd_dropdown_choice2")
+        coll_obj_col   = self.adapter.get("cd_dropdown_choice3")
+
+        time_start = time_end = coll_space = coll_obj = None
+
+        if self.processor.is_column_present(time_start_col):
+            time_start = self.processor.get_column_series(time_start_col)
+
+        if self.processor.is_column_present(time_end_col):
+            time_end = self.processor.get_column_series(time_end_col)
+
+        if self.processor.is_column_present(coll_space_col):
+            coll_space = self.processor.get_column_series(coll_space_col)
+
+        if self.processor.is_column_present(coll_obj_col):
+            coll_obj = self.processor.get_column_series(coll_obj_col)
+
+        detector = CollisionDetector(time_start=time_start,
+                                     time_end=time_end,
+                                     coll_space=coll_space,
+                                     coll_obj=coll_obj)
+
+        report = detector.detect()
+        detector.reset()
+
+        self.report_window = CollisionReport(report, title="Collision Detector Report", size=(800,500))
+        self.report_window.start()
 
 
 if __name__ == "__main__":
