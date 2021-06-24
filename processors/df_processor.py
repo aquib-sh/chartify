@@ -26,6 +26,14 @@ class DataFrameProcessor(DataProcessor):
             data.append(tuple(row))
         return data
 
+    def is_column_present(self, _key) -> bool:
+        """Check if column is present in DataFrame"""
+        if _key in self.df : return True
+        return False
+
+    def get_column_series(self, _key) -> pandas.core.series.Series:
+        return self.df[_key]
+
     def add_new_column(self, column):
         self.df[column] = numpy.nan
 
