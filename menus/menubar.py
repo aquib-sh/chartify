@@ -26,17 +26,19 @@ class MenuBar(tk.Menu):
         filemenu  = tk.Menu(self, tearoff=0)
         editmenu  = tk.Menu(self, tearoff=0)
         chartmenu = tk.Menu(self, tearoff=0)
-        
+        toolsmenu = tk.Menu(self, tearoff=0)
+
         # Give names to above menus
         self.add_cascade(label="File", menu=filemenu)
         self.add_cascade(label="Edit", menu=editmenu)
         self.add_cascade(label="3D Chart", menu=chartmenu)
+        self.add_cascade(label="Tools", menu=toolsmenu)
 
         # SubMenu inside editmenu
         insertmenu = tk.Menu(editmenu, tearoff=0)
         deletemenu = tk.Menu(editmenu, tearoff=0)
         clearmenu  = tk.Menu(editmenu, tearoff=0)
-        
+
         # Add labels to the above submenus inside edit menu
         editmenu.add_cascade(label="Insert", menu=insertmenu)
         editmenu.add_cascade(label="Delete", menu=deletemenu)
@@ -60,6 +62,12 @@ class MenuBar(tk.Menu):
         
         draw_chart_menu.add_command(label="Select Columns", command=self.master.build_chart)
         draw_chart_menu.add_command(label="Refresh", command=None)
+
+        # Add options to run tools on data in tools menu
+        toolsmenu.add_command(label="Detect Collision", command=self.master.detect_collision)
+        toolsmenu.add_command(label="Cut Chart", command=None)
+
+
 
 
 
