@@ -96,8 +96,12 @@ class Slab:
             zdiff = kwargs['Z'][1] - kwargs['Z'][0]
 
             xlen = len(kwargs['X'])
-            ylen = len(kwargs['Y'])
-            zlen = len(kwargs['Z'])
+            ylen = len(kwargs['Y'])+1
+            zlen = len(kwargs['Z'])+1
+
+            print("Xlen:", xlen)
+            print("Ylen:", ylen)
+            print("Zlen:", zlen)
 
         else:
             xstart = self.get_xlabel()
@@ -116,23 +120,22 @@ class Slab:
             ylen = len(self.axes.get_yticklabels())
             zlen = len(self.axes.get_zticklabels())
 
-
-        X = np.array([[point]*zlen for i in range(0, zlen+1)])
+        X = np.array([[point]*ylen for i in range(0, zlen)])
         Y = []
         Z = []
 
-        for i in range(0, zlen+1):
+        for i in range(0, zlen):
             tempy = []
             temp_ystart = ystart
-            for j in range(0, zlen):
+            for j in range(0, ylen):
                 tempy.append(temp_ystart)
                 temp_ystart += ydiff
             Y.append(tempy)
         Y = np.array(Y)
 
-        for i in range(0, zlen+1):
+        for i in range(0, zlen):
             tempz = []
-            for j in range(0, zlen):
+            for j in range(0, ylen):
                 tempz.append(zstart)
             zstart += zdiff
             Z.append(tempz)
