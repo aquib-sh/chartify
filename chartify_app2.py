@@ -29,7 +29,6 @@ class ChartifyAppExtended(tk.Tk):
         #plt.style.use("ggplot")
         self.axes = None
         self.X = self.Y = self.Z = None
-        self.plt = None
         self.geometry('1000x600+50+50')
         self.pack_propagate(0)
 
@@ -127,8 +126,7 @@ class ChartifyAppExtended(tk.Tk):
             ax.plot_surface(x,y,z, color=color)
 
 
-    def wykres(self):
-
+    def wykres(self, tool="draw"):
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
@@ -177,7 +175,6 @@ class ChartifyAppExtended(tk.Tk):
 
             self.X = np.arange(0,dminutes,odstep_min)
             ax.set_xticks(self.X)
-            #print(czasy_rozpoczecia)
             ax.set_xticklabels(czasy_rozpoczecia, rotation='vertical', fontsize=9)
 
             #lista osób prowadzacych zajęcia
@@ -185,14 +182,14 @@ class ChartifyAppExtended(tk.Tk):
             ax.set_ylim(0,len(profesors))
             self.Y = np.arange(0,len(profesors),1)
             ax.set_yticks(self.Y)
-            ax.set_yticklabels(profesors,  fontsize=10)
+            ax.set_yticklabels(profesors, fontsize=10)
 
             #lista sal
             rooms = df[self.kolumna_sala].unique()
             ax.set_zlim(0,len(rooms))
             self.Z = np.arange(0,len(rooms),1)
             ax.set_zticks(self.Z)
-            ax.set_zticklabels(rooms,  fontsize=10)
+            ax.set_zticklabels(rooms, fontsize=10)
 
             print("X:")
             print(self.X)
@@ -226,7 +223,21 @@ class ChartifyAppExtended(tk.Tk):
                     self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
                        
                 plt.title("Schedule")
-                self.plt = plt
+
+                if tool == "draw":
+                    plt.show()
+                elif tool == "cut":
+                    #print(czasy_rozpoczecia)
+                    #print(self.X)
+                    slaby = Slab(self.axes)
+                    modx, mody, modz = slaby.insert_slab_by_x(point=1200, X=self.X, Y=self.Y, Z=self.Z)
+                    print("PRINTING RETURNED")
+                    print(modx)
+                    print(mody)
+                    print(modz)
+                    self.axes.plot_surface(modx, mody, modz, color="RoyalBlue")
+                    plt.show()
+        
             except Exception as e:
                 messagebox.showerror("Błąd","Bład podczas tworzenia wykresu\r\n"+traceback.format_exc())
 
@@ -316,25 +327,13 @@ class ChartifyAppExtended(tk.Tk):
         self.report_window.start()
 
 
+    def draw3d_chart(self):
+        self.wykres(tool="draw")
+
+
     def insert_slab(self):
-        slaby = Slab(self.axes)
-        modx, mody, modz = slaby.insert_slab_by_x(point=1920, X=self.X, Y=self.Y, Z=self.Z)
-        print(f"X is")
-        print(self.X)
-        print(f"Mod X is {type(modx)}")
-        print(modx)
+        self.wykres(tool="cut")
 
-        print(f"Y is")
-        print(self.Y)
-        print(f"Mod Y is {type(mody)}")
-        print(mody)
-
-        print(f"Z is")
-        print(self.Z)
-        print(f"Mod Z is {type(modz)}")
-        print(modz)
-        self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.5)
-        plt.show()
 
     def start(self):
         self.mainloop()
