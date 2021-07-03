@@ -30,6 +30,8 @@ class Application(tk.Tk):
         self.geometry(f"{size[0]}x{size[1]}")
         self.resizable(False, False)
         self.title(title)
+        self.pack_propagate(0)
+
 
     def start(self):
         """Displays the window by starting the mainloop."""
