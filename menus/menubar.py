@@ -126,7 +126,7 @@ class MenuBarExtended(tk.Menu):
         draw_chart_menu = tk.Menu(chartmenu, tearoff=0)
         chartmenu.add_cascade(label="Draw Chart", menu=draw_chart_menu)
         
-        draw_chart_menu.add_command(label="Chart3D", command=self.master.wykres)
+        draw_chart_menu.add_command(label="Chart3D", command=self.master.draw3d_chart)
         draw_chart_menu.add_command(label="Refresh", command=None)
 
         # Add options to run tools on data in tools menu
