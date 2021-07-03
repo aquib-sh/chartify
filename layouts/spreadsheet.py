@@ -1,8 +1,9 @@
 #Author : Shaikh Aquib
 #Date : June 2021
 
-import tkinter as tk
 from tkinter import ttk
+import tkinter as tk
+import tksheet
 
 
 class Spreadsheet(ttk.Treeview):
@@ -123,3 +124,5 @@ class Spreadsheet(ttk.Treeview):
         self.set_columns(new_column_tup)
 
         return new_column_tup
+
+
