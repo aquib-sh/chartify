@@ -96,9 +96,9 @@ class CollisionDetector:
         if len(collision_report) == 0:
             collision_report = "No collisions in between object detected."
 
-        report += "$$$$"*15
+        report += "$$$$"*16
         report += "\n\t\tCOLLISION DETECTION REPORT\n"
-        report += "$$$$" * 15
+        report += "$$$$" * 16
         report += "\n\n"
         report += f"Collisions:\n\n{collision_report}\n\nInconsistencies:\n\n{inconsis_report}"
 
