@@ -21,13 +21,3 @@ class WindowFrame(tk.Frame):
             root widget on which frame will be placed.
         """
         super().__init__(master, width=width, height=height)
-
-
-    # def pack_frames(self, side:tk.constants):
-    #     """Used to pack the current frame on a root widget.
-    #     Parameters
-    #     ----------
-    #     side : tk.constants
-    #         side at which to pack the frame (TOP, BOTTOM, LEFT, RIGHT)
-    #     """
-    #     self.pack(side)
