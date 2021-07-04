@@ -1,25 +1,24 @@
-from menus.menubar import MenuBarExtended
 import sys
 sys.path.append('../')
 import threading
-from tkinter.constants import *
-from tkinter import ttk, messagebox
-import tkinter as tk
 import traceback
 import numpy as np
-import matplotlib.pyplot as plt
 import pandas
 import tksheet
-from tkinter import filedialog
+import tkinter as tk
+from tkinter.constants import *
+from tkinter import ttk, messagebox, filedialog
+import matplotlib.pyplot as plt
+from chartify import config
 from chartify.layouts.frame import WindowFrame
 from chartify.layouts.insert_window import InsertWindow
 from chartify.layouts.delete_window import DeleteWindow
 from chartify.layouts.collision_settings_window import CollisionSettings
 from chartify.layouts.collision_report_window import CollisionReport
+from chartify.processors.timeline_mapper import TimelineMapper
 from chartify.tools.collision_detector import CollisionDetector
 from chartify.tools.slab import Slab
 from chartify.menus.menubar import MenuBarExtended
-from chartify import config
 
 
 class ChartifyAppExtended(tk.Tk):
