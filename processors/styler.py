@@ -54,7 +54,8 @@ class ChartifyStyler:
         """Sets the font for sheet."""
         size: int = self.get_sheet_font_size()
         text_style: str = self.get_sheet_style()[2]
-        self.set_sheet_style((font, size, text_style))
+        sheet_style = (font, int(size), text_style)
+        self.set_sheet_style(sheet_style)
 
 
     def set_fig_bg(self, color: str) -> None:
