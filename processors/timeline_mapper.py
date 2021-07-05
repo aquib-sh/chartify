@@ -18,7 +18,15 @@ class TimelineMapper:
     def generate_mappings(self):
         for i in range(0, len(self.timeline)):
             self.map[self.timeline[i]] = self.ticks[i]
-            date, hours, minutes = self.dissect_label(self.timeline[i])
+
+
+    def get_all_dates(self) -> list:
+        """Returns all the dates."""
+        dates = []
+        for i in range(0, len(self.timeline)):
+            date, _, _ = self.dissect_label(self.timeline[i])
+            dates.append(date)
+        return tuple(set(dates))
 
 
     def get_point(self, search_time:str) -> int:
