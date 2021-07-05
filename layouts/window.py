@@ -478,5 +478,8 @@ class ChartifyOptions(TopLevelWindow):
         #self.adapter.insert("chart-label-font-size", self.chart_lbl_fsize.get())
         self.exit_window()
 
-    def destroy_window(self) -> None:
+    def destroy_window(self) -> None:        
+        self.adapter.insert("table-font",       None)
+        self.adapter.insert("graph-background", None)
+        self.adapter.insert("table-font-size",  None)
         self.exit_window()
