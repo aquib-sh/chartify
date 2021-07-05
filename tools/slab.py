@@ -99,10 +99,6 @@ class Slab:
             ylen = len(kwargs['Y'])+1
             zlen = len(kwargs['Z'])+1
 
-            print("Xlen:", xlen)
-            print("Ylen:", ylen)
-            print("Zlen:", zlen)
-
         else:
             xstart = self.get_xlabel()
             ystart = self.get_ylabel()
