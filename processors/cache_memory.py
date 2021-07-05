@@ -79,8 +79,7 @@ class CacheProcessor:
 class CacheSaver:
     """Saves Cache of the application."""
     def __init__(self):
-        self.__cache_dir__ = os.path.abspath(os.path.join(
-            os.path.pardir, 'cache'))
+        self.__cache_dir__ = os.path.abspath('cache')
         self.__cache_f__ = os.path.abspath(os.path.join(
             self.__cache_dir__, 'attributes.json'))
 
@@ -93,11 +92,9 @@ class CacheSaver:
 
 class CacheRetriever:
     def __init__(self):
-        self.__cache_dir__ = os.path.abspath(os.path.join(
-            os.path.pardir, 'cache'))
+        self.__cache_dir__ = os.path.abspath('cache')
         self.__cache_f__ = os.path.abspath(os.path.join(
             self.__cache_dir__, 'attributes.json'))
-
         if not os.path.exists(self.__cache_dir__) : os.mkdir(self.__cache_dir__)
 
     def cache_exists(self):
