@@ -1,3 +1,4 @@
+import os
 import sys
 sys.path.append('../')
 import threading
@@ -5,29 +6,38 @@ import traceback
 import numpy as np
 import pandas
 import tksheet
+from tksheet._tksheet_vars import theme_dark_blue
 import tkinter as tk
 from tkinter.constants import *
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
 from chartify import config
+from chartify.menus.menubar import MenuBarExtended
 from chartify.layouts.frame import WindowFrame
-from chartify.layouts.insert_window import InsertWindow
-from chartify.layouts.delete_window import DeleteWindow
-from chartify.layouts.collision_settings_window import CollisionSettings
-from chartify.layouts.collision_report_window import CollisionReport
+from chartify.layouts.window import InsertWindow
+from chartify.layouts.window import DeleteWindow
+from chartify.layouts.window import ChartifyOptions
+from chartify.layouts.window import CollisionReport
+from chartify.layouts.window import CollisionSettings
+from chartify.layouts.window import CutChartSettings
+from chartify.processors.data_adapter import DataAdapter
 from chartify.processors.timeline_mapper import TimelineMapper
+from chartify.processors.styler import ChartifyStyler
 from chartify.tools.collision_detector import CollisionDetector
 from chartify.tools.slab import Slab
-from chartify.menus.menubar import MenuBarExtended
 
 
 class ChartifyAppExtended(tk.Tk):
     def __init__(self):
         super().__init__()
-
+        self.title(config.title)
         #plt.style.use("ggplot")
         self.axes = None
+        self.fig  = None
+        self.fig_bg = None
+        self.adapter = DataAdapter()
         self.X = self.Y = self.Z = None
+        self.choice_is_null = True
         self.geometry('1000x600+50+50')
         self.pack_propagate(0)
 
@@ -61,7 +71,10 @@ class ChartifyAppExtended(tk.Tk):
             return
     
         current_file_name = file_name
+        base_file = os.path.basename(current_file_name)
         self.load_file(current_file_name)
+        self.title(f"{base_file} - Chartify")
+        self.choice_is_null = True
 
 
     def load_file(self, filename):
@@ -130,7 +143,8 @@ class ChartifyAppExtended(tk.Tk):
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
 
-        self.okno_wybor_kolumn(list(df.columns))
+        # Open column choice window only if it hasn't been chosen already.
+        if self.choice_is_null : self.okno_wybor_kolumn(list(df.columns))
 
         df[self.kolumna_czas_rozpoczecia] = pandas.to_datetime(df[self.kolumna_czas_rozpoczecia])
         df[self.kolumna_czas_zakonczenia] = pandas.to_datetime(df[self.kolumna_czas_zakonczenia])
@@ -140,6 +154,7 @@ class ChartifyAppExtended(tk.Tk):
             df.sort_values(by=[self.kolumna_czas_rozpoczecia],inplace=True)
             
             fig = plt.figure(figsize=(6,6))
+            self.fig = fig
             fig.canvas.manager.set_window_title('Schedule')
             ax = fig.add_subplot(projection='3d')
             ax.set_xlabel('Timeline', fontweight ='bold',labelpad=30)
@@ -190,13 +205,6 @@ class ChartifyAppExtended(tk.Tk):
             ax.set_zticks(self.Z)
             ax.set_zticklabels(rooms, fontsize=10)
 
-            print("X:")
-            print(self.X)
-            print("Y:")
-            print(self.Y)
-            print("Z:")
-            print(self.Z)
-
             self.axes = ax
             colors =['blue','red','green','yellow','orange','violet','peru','pink']
 
@@ -222,19 +230,23 @@ class ChartifyAppExtended(tk.Tk):
                     self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
                        
                 plt.title("Schedule")
+                if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
 
                 if tool == "draw":
                     plt.show()
                 elif tool == "cut":
-                    #print(czasy_rozpoczecia)
-                    #print(self.X)
+                    tmap = TimelineMapper(czasy_rozpoczecia, self.X)
+                    dates = tmap.get_all_dates()
+                    
+                    settings = CutChartSettings(self.adapter, dates)
+                    settings.start()
+                    selected_date = self.adapter.get('cut-chart-setting-date')
+                    selected_time = self.adapter.get('cut-chart-setting-time')
+
+                    point = tmap.get_point(f"{selected_date} {selected_time}")
                     slaby = Slab(self.axes)
-                    modx, mody, modz = slaby.insert_slab_by_x(point=1200, X=self.X, Y=self.Y, Z=self.Z)
-                    print("PRINTING RETURNED")
-                    print(modx)
-                    print(mody)
-                    print(modz)
-                    self.axes.plot_surface(modx, mody, modz, color="RoyalBlue")
+                    modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
+                    self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
                     plt.show()
         
             except Exception as e:
@@ -293,20 +305,35 @@ class ChartifyAppExtended(tk.Tk):
         combo5.place(x=200,y=ypos)
         ypos +=30
 
-
         def zamknij():
             self.kolumna_profesor = combo1.get()
             self.kolumna_sala = combo2.get()
             self.kolumna_czas_rozpoczecia=combo3.get()
             self.kolumna_czas_trwania=combo4.get()
-            self.kolumna_czas_zakonczenia=combo5.get()        
+            self.kolumna_czas_zakonczenia=combo5.get()
+            self.choice_is_null = False        
             dlg.destroy()
-
 
         btn_ok = ttk.Button(dlg, text = "OK", command = zamknij)
         btn_ok.place(x=140,y=250)
 
         self.wait_window(dlg) 
+
+
+    def show_options(self):
+        styler = ChartifyStyler(self, self.sheet, figure=self.fig)
+        fonts = styler.get_all_fonts()
+        opts = ChartifyOptions(self.adapter)
+        opts.add_fonts(fonts)
+        opts.start()
+
+        tbl_font  = self.adapter.get("table-font")
+        tbl_fsize = self.adapter.get("table-font-size")
+        graph_bg  = self.adapter.get("graph-background")
+
+        if tbl_font  != None and tbl_font != ''  : styler.set_sheet_font(tbl_font)
+        if tbl_fsize != None and tbl_fsize != '' : styler.set_sheet_font_size(int(tbl_fsize)) 
+        if graph_bg != None and graph_bg != '' : self.fig_bg = graph_bg  
 
 
     def detect_collision(self):
@@ -340,5 +367,5 @@ class ChartifyAppExtended(tk.Tk):
 
 if __name__ == "__main__":
     obj = ChartifyAppExtended()
-    obj.load_file(r"C:\Users\Aquib\Projects\fiverr-projects\augustino\chartify\requirements\3DCHARTS_ENG_DOCS\table1_short.csv")
+    obj.load_file(r"C:\Users\Aquib\Projects\fiverr-projects\augustino\chartify\requirements\3DCHARTS_ENG_DOCS\time_and_distnace14V.csv")
     obj.start()
