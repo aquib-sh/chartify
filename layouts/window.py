@@ -357,3 +357,126 @@ class ChartWindow(TopLevelWindow):
             _k = f'dropdown_choice{i}'
             self.adapter.insert(_k, val)
         self.exit_window()
+
+
+
+class CutChartSettings(TopLevelWindow):
+    """Takes input settings for building CutChart view.
+    
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    dates: tuple
+        Dates which will be placed in dropdown.
+
+    title: str (default="Cut Chart Settings")
+        Title for window.
+
+    size: tuple (default=(400, 200))
+        Size of the window.
+    """
+    def __init__(self, adapter, dates:tuple, title="Cut Chart Settings", size=(400,200)):
+        super(CutChartSettings, self).__init__(title=title, size=size)
+        self.adapter = adapter
+        self.n1 = tk.StringVar()
+
+        self.date_label = ttk.Label(self, text="Select date")
+        self.date_label.grid(row=0, column=0)
+
+        self.choice1 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1)
+        self.choice1['values'] = dates
+        self.choice1.current(0)
+        self.choice1.grid(row=1, column=0)
+
+        build_btn = ttk.Button(self, text="BUILD", command=self.transfer_value_and_destroy)
+        build_btn.grid(row=0, column=1, padx=(100, 100))
+
+        self.time_label = ttk.Label(self, text="time in hh:mm")
+        self.time = ttk.Entry(self)
+        self.time_label.grid(row=2, column=0)
+        self.time.grid(row=3, column=0)
+
+
+    def transfer_value_and_destroy(self):
+        """Inserts the textbox value into the adapter."""
+        self.adapter.insert('cut-chart-setting-date', self.choice1.get())
+        self.adapter.insert('cut-chart-setting-time', self.time.get())
+        self.exit_window()
+
+
+
+class ChartifyOptions(TopLevelWindow):
+    """Takes input settings for building CutChart view.
+    
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    title: str (default="Chartify Options")
+        Title for window.
+
+    size: tuple (default=(400, 400))
+        Size of the window.
+    """
+    def __init__(self, adapter, title="Chartify Options", size=(400,400)):
+        super(ChartifyOptions, self).__init__(title=title, size=size)
+        self.adapter = adapter
+        
+        ttk.Label(self, text="Table Font:")      .grid(row=0, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Graph Background:").grid(row=1, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Table Font Size:") .grid(row=2, column=0, sticky='W', pady=(0, 50))
+        #ttk.Label(self, text="Chart label font size:") .grid(row=4, column=0, sticky='W')
+        #ttk.Label(self, text="Table Background:")      .grid(row=1, column=0, sticky='W')
+
+        self.n1 = tk.StringVar()
+        self.n2 = tk.StringVar()
+        self.n3 = tk.StringVar()
+        self.n4 = tk.StringVar()
+        self.n5 = tk.StringVar()
+
+        self.table_font      = ttk.Combobox(self, state="readonly", textvariable=self.n1)
+        self.graph_bg        = ttk.Combobox(self, state="readonly", textvariable=self.n2)
+        self.table_fsize     = ttk.Combobox(self, state="readonly", textvariable=self.n3)
+        #self.chart_lbl_fsize = ttk.Combobox(self, state="readonly", textvariable=self.n5)
+        #self.table_bg        = ttk.Combobox(self, state="readonly", textvariable=self.n2)
+
+        self.table_font      .grid(row=0, column=1, sticky='E', pady=(0,50))
+        self.graph_bg        .grid(row=1, column=1, sticky='E', pady=(0,50))
+        self.table_fsize     .grid(row=2, column=1, sticky='E', pady=(0,50))
+        #self.chart_lbl_fsize .grid(row=4, column=1, sticky='E')
+        #self.table_bg        .grid(row=1, column=1, sticky='E')
+
+        self.graph_bg['values'] = [
+            'red',    'black',  'white', 
+            'green',  'grey',   'blue', 
+            'voilet', 'yellow', 'purple', 
+            'pink',   'peru',   'orange'
+            ]
+
+        self.table_fsize['values'] = list(i for i in range(10, 30))
+        #self.chart_lbl_fsize['values'] = list(i for i in range(10, 20))
+
+        apply_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        close_btn = ttk.Button(self, text="Close", command=self.destroy_window)
+        apply_btn.grid(row=5, column=0, padx=(0, 100), pady=(100,0))
+        close_btn.grid(row=5, column=1, padx=(100, 0), pady=(100,0))
+
+
+    def add_fonts(self, fonts: list):
+        self.table_font['values'] = fonts
+
+
+    def transfer_value_and_destroy(self):
+        """Inserts the textbox value into the adapter."""
+        self.adapter.insert("table-font",            self.table_font.get())
+        #self.adapter.insert("table-background" ,     self.table_bg.get())
+        self.adapter.insert("graph-background" ,     self.graph_bg.get())
+        self.adapter.insert("table-font-size"  ,     self.table_fsize.get())
+        #self.adapter.insert("chart-label-font-size", self.chart_lbl_fsize.get())
+        self.exit_window()
+
+    def destroy_window(self) -> None:
+        self.exit_window()
