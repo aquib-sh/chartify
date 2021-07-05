@@ -68,6 +68,7 @@ class MenuBar(tk.Menu):
         toolsmenu.add_command(label="Cut Chart", command=None)
 
 
+
 class MenuBarExtended(tk.Menu):
     """ MenuBar
 
@@ -88,16 +89,18 @@ class MenuBarExtended(tk.Menu):
 
         # Add the first 3 menus
         filemenu  = tk.Menu(self, tearoff=0)
-        editmenu  = tk.Menu(self, tearoff=0)
+        #editmenu  = tk.Menu(self, tearoff=0)
         chartmenu = tk.Menu(self, tearoff=0)
         toolsmenu = tk.Menu(self, tearoff=0)
+        optionsmenu = tk.Menu(self, tearoff=0)
 
         # Give names to above menus
         self.add_cascade(label="File", menu=filemenu)
-        self.add_cascade(label="Edit", menu=editmenu)
+        #self.add_cascade(label="Edit", menu=editmenu)
         self.add_cascade(label="3D Chart", menu=chartmenu)
         self.add_cascade(label="Tools", menu=toolsmenu)
-
+        self.add_cascade(label="Options", menu=optionsmenu)
+        
         # SubMenu inside editmenu
         # insertmenu = tk.Menu(editmenu, tearoff=0)
         # deletemenu = tk.Menu(editmenu, tearoff=0)
@@ -132,3 +135,5 @@ class MenuBarExtended(tk.Menu):
         # Add options to run tools on data in tools menu
         toolsmenu.add_command(label="Detect Collision", command=self.master.detect_collision)
         toolsmenu.add_command(label="Cut Chart", command=self.master.insert_slab)
+
+        optionsmenu.add_command(label="Settings", command=self.master.show_options)
