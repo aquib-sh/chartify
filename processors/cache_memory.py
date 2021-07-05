@@ -100,13 +100,12 @@ class CacheRetriever:
 
         if not os.path.exists(self.__cache_dir__) : os.mkdir(self.__cache_dir__)
 
+    def cache_exists(self):
+        return os.path.exists(self.__cache_f__)
+
     def retrieve_cache(self) -> dict:
         cache: dict = {}
         with open(self.__cache_f__, "r") as f:
             cache = json.load(f)
         return cache
 
-if __name__ == "__main__":
-    retriever = CacheRetriever()
-    cache = retriever.retrieve_cache()
-    print(cache)
