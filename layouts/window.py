@@ -108,8 +108,8 @@ class InsertWindow(TopLevelWindow):
         self.adapter_key = _key
 
         label = Label(self, text=f"{_type.capitalize()} Name:")
-        self.text_box = Text(self, height=1, width=20)
-        self.insert_btn = Button(self, text="Insert", command=self.transfer_value_and_destroy)
+        self.text_box = ttk.Entry(self)
+        self.insert_btn = Button(self, text="Apply", command=self.transfer_value_and_destroy)
 
         label.pack()
         Label(self, text="").pack() #empty space
@@ -120,8 +120,54 @@ class InsertWindow(TopLevelWindow):
 
     def transfer_value_and_destroy(self) -> str:
         """Returns the textbox value."""
-        self.adapter.insert(self.adapter_key, self.text_box.get(1.0, END))
+        self.adapter.insert(self.adapter_key, self.text_box.get())
         self.exit_window()
+
+
+class InsertRowWindow(TopLevelWindow):
+    """Insert window which inserts rows to the spreadsheet.
+
+    Parameters
+    ----------
+    adapter : chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    columns : list
+        columns of the current dataframe, adapter values will also be returned with these names.
+
+    title : str
+        Title of the window
+
+    size : tuple
+        Size of window (x:int, y:int) where x is width and y is height.
+
+    """
+    def __init__(self, adapter, columns: list, title: str, size: tuple):
+        super(InsertRowWindow, self).__init__(title=title, size=size)
+
+        self.adapter = adapter
+        self.columns = columns
+        self.register = {}
+
+        r=0 # row index
+        for col in self.columns:
+            Label(self, text=f"{col} : ").grid(row=r, column=0)
+            entry = ttk.Entry(self)
+            self.register[col] = entry
+            entry.grid(row=r, column=1)
+            # Register the entry boxes to retrieve further by col names.
+            r += 1
+
+        self.insert_btn = Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        self.insert_btn.grid(row=r, column=0, padx=(150, 0), pady=(100, 100))
+
+
+    def transfer_value_and_destroy(self) -> str:
+        """Returns the textbox value."""
+        for col in self.columns:
+            self.adapter.insert(col, self.register[col].get())
+        self.exit_window()
+
 
 
 
@@ -259,40 +305,45 @@ class CollisionReport(TopLevelWindow):
 
 
 
-class ChartWindow(TopLevelWindow):
+class ColumnSelectionWindow(TopLevelWindow):
     """Insert window which inserts column and rows to the spreadsheet.
 
     Parameters
     ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    dataframe: pandas.DataFrame
+        DataFrame used in the functions to display dropdowns.
+
     title : str
         Title of the window
 
     size : tuple
         Size of window (x:int, y:int) where x is width and y is height.
     """
-    def __init__(self, adapter, title:str, size:tuple):
-        super(ChartWindow, self).__init__(title=title, size=size)
+    def __init__(self, adapter, dataframe,  title:str, size:tuple):
+        super(ColumnSelectionWindow, self).__init__(title=title, size=size)
         self.adapter = adapter
+        self.title   = title
+        self.size    = size
+        self.df      = dataframe
 
         col_choice = Label(self, text="Choice of columns")
-        type_nos = Label(self, text="Type of numbers")
-        show_min = Label(self, text="Show min")
-        show_max = Label(self, text="Show max")
-
-        axe_x = Label(self, text="Axe X")
-        axe_y = Label(self, text="Axe Y")
-        axe_x_sp = Label(self, text="Axe X Start Point")
-        axe_y_duration = Label(self, text="Axe Y Duration")
+        type_nos   = Label(self, text="Type of numbers")
+ 
+        axe_y          = Label(self, text="Axe Y (object)")
+        axe_z          = Label(self, text="Axe Z (space)")
+        axe_x_sp       = Label(self, text="Axe X Start Point")
+        axe_x_duration = Label(self, text="Axe X Duration")
 
         col_choice.grid(row=0, column=1, padx=(100, 30))
-        type_nos.grid(row=0, column=2, padx=(0, 30))
-        show_min.grid(row=0, column=3, padx=(0, 30))
-        show_max.grid(row=0, column=4, padx=(0, 30))
-
-        axe_x.grid(row=1, column=0, padx=(0, 80), pady=10)
-        axe_y.grid(row=2, column=0, padx=(0, 80), pady=10)
-        axe_x_sp.grid(row=3, column=0, padx=(0, 50), pady=10)
-        axe_y_duration.grid(row=4, column=0, padx=(0, 60), pady=10)
+        type_nos  .grid(row=0, column=2, padx=(0, 30))
+ 
+        axe_y         .grid(row=1, column=0, padx=(0, 80), pady=10)
+        axe_z         .grid(row=2, column=0, padx=(0, 80), pady=10)
+        axe_x_sp      .grid(row=3, column=0, padx=(0, 50), pady=10)
+        axe_x_duration.grid(row=4, column=0, padx=(0, 60), pady=10)
 
         self.n1 = tk.StringVar()
         self.n2 = tk.StringVar()
@@ -340,8 +391,23 @@ class ChartWindow(TopLevelWindow):
         self.text_vars = (self.n1, self.n2, self.n3, self.n4)
 
         build_btn = ttk.Button(self, text="BUILD", command=self.transfer_value_and_destroy)
-        Label(self, text="").grid(row=5, column=1)
-        build_btn.grid(row=6, column=1, padx=(200, 100))
+        range_btn = ttk.Button(self, text="SELECT MIN-MAX RANGE", command=self.open_range_window)
+        build_btn.grid(row=6, column=0, padx=(100, 0), pady=(150,100))
+        range_btn.grid(row=6, column=1, padx=(100, 0), pady=(150,100))
+
+
+    def open_range_window(self):
+        space    = self.n1.get()
+        object   = self.n2.get()
+        xaxis    = self.n3.get()
+        duration = self.n4.get()  
+
+        xaxis_dtype     = self.n5.get()
+        duration_dtype  = self.n6.get()
+
+        range_window = RangeSelectionWindow(self.adapter, dataframe=self.df, title="Range Selection", size=(900, 400))
+        range_window.set_min_max(xstart=xaxis, yaxis=object, zaxis=space)
+        range_window.start()
 
 
     def update_dropdown(self, values):
@@ -352,10 +418,127 @@ class ChartWindow(TopLevelWindow):
 
     def transfer_value_and_destroy(self):
         """Returns the textbox value."""
-        for i in range(0, len(self.text_vars)):
-            val = self.text_vars[i].get()
-            _k = f'dropdown_choice{i}'
-            self.adapter.insert(_k, val)
+        space    = self.n1.get()
+        _object  = self.n2.get()
+        xaxis    = self.n3.get()
+        duration = self.n4.get()  
+
+        xaxis_dtype     = self.n5.get()
+        duration_dtype  = self.n6.get()
+
+        self.adapter.insert('zaxis', space)
+        self.adapter.insert('yaxis', _object)
+        self.adapter.insert('xaxis', xaxis)
+        self.adapter.insert('duration', duration)
+        self.adapter.insert('xaxis_type', xaxis_dtype)
+        self.adapter.insert('duration_type', duration_dtype)
+
+
+
+        self.exit_window()
+
+
+
+class RangeSelectionWindow(TopLevelWindow):
+    """Allows users to choose the settings/columns for Collision Detection.
+
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    df: pandas.DataFrame
+        Pandas DataFrame used for setting min-max.
+
+    title : str
+        Title of the window
+
+    size : tuple
+        Size of window (x:int, y:int) where x is width and y is height.
+    """
+    def __init__(self, adapter, dataframe, title:str, size:tuple):
+        super(RangeSelectionWindow, self).__init__(title=title, size=size)
+        self.adapter = adapter
+        self.df = dataframe
+
+        lbl1_text = 'Y Axis (object):'
+        lbl2_text = 'Z Axis (space):'
+        lbl3_text = 'X Start Point:'
+
+        Label(self, text="MIN").grid(row=0, column=1)
+        Label(self, text="MAX").grid(row=0, column=2)
+        Label(self, text=lbl1_text).grid(row=1, column=0, sticky='W')
+        Label(self, text=lbl2_text).grid(row=2, column=0, sticky='W')
+        Label(self, text=lbl3_text).grid(row=3, column=0, sticky='W')
+
+        self.n1_start = tk.StringVar()
+        self.n2_start = tk.StringVar()
+        self.n3_start = tk.StringVar()
+
+        self.n1_end = tk.StringVar()
+        self.n2_end = tk.StringVar()
+        self.n3_end = tk.StringVar()
+
+        # ============================= Create 3 Dropdowns ===============================
+        self.choice1_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_start)
+        self.choice2_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_start)
+        self.choice3_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_start)
+
+        self.choice1_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_end)
+        self.choice2_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_end)
+        self.choice3_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_end)
+        
+        self.choice1_start.grid(row=1, column=1)
+        self.choice2_start.grid(row=2, column=1)
+        self.choice3_start.grid(row=3, column=1)
+        
+        self.choice1_end.grid(row=1, column=2)
+        self.choice2_end.grid(row=2, column=2)
+        self.choice3_end.grid(row=3, column=2)
+
+        build_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        build_btn.grid(row=4, column=0, padx=(200, 100), pady=(150,100))
+
+
+    def set_min_max(self, xstart: str, yaxis: str, zaxis: str):
+        """Populates Minimum and Maximum dropdowns from the given column names of dataframes.
+        
+        Parameters
+        ----------
+        xstart: str
+            X Start column name for DataFrame.
+        yaxis: str
+            Y Axis column name for DataFrame.
+        zaxis: str
+            Z Start column name for DataFrame.
+        """
+        self.choice1_start['values'] = self.df[yaxis].sort_values().tolist()
+        self.choice1_end['values']   = self.df[yaxis].sort_values(ascending=False).tolist()
+        self.choice1_start.current(0)
+        self.choice1_end.current(0)
+
+        self.choice2_start['values'] = self.df[zaxis].sort_values().tolist()
+        self.choice2_end['values']   = self.df[zaxis].sort_values(ascending=False).tolist()
+        self.choice2_start.current(0)
+        self.choice2_end.current(0)
+
+        self.choice3_start['values'] = self.df[xstart].sort_values().tolist()
+        self.choice3_end['values']   = self.df[xstart].sort_values(ascending=False).tolist()
+        self.choice3_start.current(0)
+        self.choice3_end.current(0)
+
+
+    def transfer_value_and_destroy(self):
+        """Returns the textbox value."""
+        self.adapter.insert('range_window_opened', True)
+        self.adapter.insert('yaxis_min', self.n1_start.get())
+        self.adapter.insert('zaxis_min', self.n2_start.get())
+        self.adapter.insert('xaxis_min', self.n3_start.get())
+
+        self.adapter.insert('yaxis_max', self.n1_end.get())
+        self.adapter.insert('zaxis_max', self.n2_end.get())
+        self.adapter.insert('xaxis_max', self.n3_end.get())
+
         self.exit_window()
 
 
@@ -403,6 +586,39 @@ class CutChartSettings(TopLevelWindow):
         """Inserts the textbox value into the adapter."""
         self.adapter.insert('cut-chart-setting-date', self.choice1.get())
         self.adapter.insert('cut-chart-setting-time', self.time.get())
+        self.exit_window()
+
+
+
+class CutChartNumericalSettings(TopLevelWindow):
+    """Takes input settings for building CutChart view.
+    
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    title: str (default="Cut Chart Settings")
+        Title for window.
+
+    size: tuple (default=(400, 200))
+        Size of the window.
+    """
+    def __init__(self, adapter, title="Cut Chart Settings", size=(400,200)):
+        super(CutChartNumericalSettings, self).__init__(title=title, size=size)
+        self.adapter = adapter
+    
+        self.time_label = ttk.Label(self, text="Value to cut the chart at:")
+        self.time = ttk.Entry(self)
+        self.time_label.grid(row=0, column=0, padx=(50,50))
+        self.time.grid(row=1, column=0, padx=(100,100))
+
+        build_btn = ttk.Button(self, text="BUILD", command=self.transfer_value_and_destroy)
+        build_btn.grid(row=2, column=0, padx=(100, 100))
+
+    def transfer_value_and_destroy(self):
+        """Inserts the textbox value into the adapter."""
+        self.adapter.insert('cut-chart-setting-point', self.time.get())
         self.exit_window()
 
 
