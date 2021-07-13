@@ -16,3 +16,6 @@ class DataAdapter:
 
     def keys(self):
         return tuple(self._dict.keys())
+
+    def ispresent(self, _key):
+        return _key in self._dict
