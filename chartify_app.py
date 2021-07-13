@@ -1,31 +1,36 @@
 import os
 import sys
+from numpy.core.fromnumeric import size
+from numpy.lib.function_base import insert
 sys.path.append('../')
-import threading
+import datetime
 import traceback
 import numpy as np
 import pandas
 import tksheet
+import config
 import tkinter as tk
 from tkinter.constants import *
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
-from chartify import config
-from chartify.menus.menubar import MenuBarExtended
-from chartify.layouts.frame import WindowFrame
-from chartify.layouts.window import InsertWindow
-from chartify.layouts.window import DeleteWindow
-from chartify.layouts.window import ChartifyOptions
-from chartify.layouts.window import CollisionReport
-from chartify.layouts.window import CollisionSettings
-from chartify.layouts.window import CutChartSettings
-from chartify.processors.data_adapter import DataAdapter
-from chartify.processors.timeline_mapper import TimelineMapper
-from chartify.processors.styler import ChartifyStyler
-from chartify.processors.cache_memory import CacheSaver
-from chartify.processors.cache_memory import CacheRetriever
-from chartify.tools.collision_detector import CollisionDetector
-from chartify.tools.slab import Slab
+from menus.menubar import MenuBarExtended
+from layouts.frame import WindowFrame
+from layouts.window import ColumnSelectionWindow
+from layouts.window import InsertWindow
+from layouts.window import InsertRowWindow
+from layouts.window import DeleteWindow
+from layouts.window import ChartifyOptions
+from layouts.window import CollisionReport
+from layouts.window import CollisionSettings
+from layouts.window import CutChartSettings
+from layouts.window import CutChartNumericalSettings
+from processors.data_adapter import DataAdapter
+from processors.timeline_mapper import TimelineMapper
+from processors.styler import ChartifyStyler
+from processors.cache_memory import CacheSaver
+from processors.cache_memory import CacheRetriever
+from tools.collision_detector import CollisionDetector
+from tools.slab import Slab
 
 
 class ChartifyAppExtended(tk.Tk):
@@ -35,6 +40,7 @@ class ChartifyAppExtended(tk.Tk):
         self.axes = None
         self.fig  = None
         self.fig_bg = None
+        self.df = None
         self.sheet_font  = None
         self.sheet_fsize = None
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
@@ -77,14 +83,17 @@ class ChartifyAppExtended(tk.Tk):
 
         self.current_file_name = ""
 
-        self.kolumna_sala = 'Sala'
-        self.kolumna_profesor = 'Profesor'
-        self.kolumna_czas_rozpoczecia='Czas rozpoczęcia'
-        self.kolumna_czas_zakonczenia='Czas zakończenia'
-        self.kolumna_czas_trwania='Czas trwania (min)'
+        self.zaxis_column = 'Sala'
+        self.yaxis_column = 'Profesor'
+        self.xaxis_column='Czas rozpoczęcia'
+        self.end_column='Czas zakończenia'
+        self.duration_column='Czas trwania (min)'
 
 
     def open_file(self):
+        """Opens up file chooser to select the file
+           calls load_file() to import data into spreadsheet.
+        """
         file_name = filedialog.askopenfilename(initialdir="/",
                                         title="Open a file",
                                         filetype=( ("csv files", "*.csv"), ("xlsx files", "*.xlsx"),("all files", "*.*")))
@@ -99,18 +108,20 @@ class ChartifyAppExtended(tk.Tk):
 
 
     def load_file(self, filename):
+        """Loads the file into application by placing it into spreadsheet."""
         if not filename.lower().endswith(".csv"):
-            df = pandas.read_excel(filename, engine='openpyxl')
+            self.df = pandas.read_excel(filename, engine='openpyxl')
         else:
-            df = pandas.read_csv(filename)
+            self.df = pandas.read_csv(filename)
 
-        df_rows = df.to_numpy().tolist()  
-        self.sheet.headers(df.columns.tolist())
+        df_rows = self.df.to_numpy().tolist()  
+        self.sheet.headers(self.df.columns.tolist())
         self.sheet.set_sheet_data(df_rows)
         self.current_file_name = filename
 
 
     def save_file(self):
+        """Performs tasks for saving the existing spreadsheet data in CSV and XLSX formats."""
         if self.current_file_name.lower().endswith(".csv"):
             sheet_data = self.sheet.get_sheet_data()
             sheet_headers = self.sheet.headers()
@@ -132,17 +143,16 @@ class ChartifyAppExtended(tk.Tk):
 
 
     def save_file_as(self):
+        """Performs tasks for saving as file for the existing spreadsheet data in CSV and XLSX formats."""
         file_name = filedialog.asksaveasfilename(initialdir="/",
                                         title="Choose file",
                                         filetype=(("csv files", "*.csv"),("xlsx files", "*.xlsx"),("all files", "*.*")))
     
         if file_name == '':
             return
-    
         if (not file_name.endswith(".csv")) and (not file_name.endswith(".xlsx")):
             file_name += ".csv"
         self.current_file_name = file_name
-    
         self.save_file()
 
 
@@ -167,190 +177,229 @@ class ChartifyAppExtended(tk.Tk):
     def plotCubeAt(self, pos=(0,0,0),size=(1,1,1),color='b', ax=None):
         if ax !=None:
             x, y, z = self.cuboid_data(pos,size )
+            print(x,y,z)
             ax.plot_surface(x,y,z, color=color)
 
 
-    def wykres(self, tool="draw"):
+    def plot_chart(self, tool="draw"):
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
 
         # Open column choice window only if it hasn't been chosen already.
-        if self.choice_is_null : self.okno_wybor_kolumn(list(df.columns))
-
-        df[self.kolumna_czas_rozpoczecia] = pandas.to_datetime(df[self.kolumna_czas_rozpoczecia])
-        df[self.kolumna_czas_zakonczenia] = pandas.to_datetime(df[self.kolumna_czas_zakonczenia])
-        df[self.kolumna_czas_trwania] = pandas.to_numeric(df[self.kolumna_czas_trwania])
+        if self.choice_is_null : self.open_column_selection()
+        df[self.duration_column] = pandas.to_numeric(df[self.duration_column])
 
         try:
-            df.sort_values(by=[self.kolumna_czas_rozpoczecia],inplace=True)
-            
             fig = plt.figure(figsize=(6,6))
             self.fig = fig
             fig.canvas.manager.set_window_title('Schedule')
             ax = fig.add_subplot(projection='3d')
-            ax.set_xlabel('Timeline', fontweight ='bold',labelpad=30)
-            ax.set_ylabel('Object', fontweight ='bold')
-            ax.set_zlabel('Space', fontweight ='bold')
 
-            #okreslamy zakres czasowy 
-            minvals = df.min()
-            min = minvals[self.kolumna_czas_rozpoczecia] #najwczesniejsza data wśród dat rozpoczęcia
-            maxvals = df.max()
-            max = maxvals[self.kolumna_czas_zakonczenia] #najpóźniejsza data wśród dat zakończenia
-            d = max - min # okres
+            ax.set_xlabel(self.xaxis_column, fontweight ='bold',labelpad=30)
+            ax.set_ylabel(self.yaxis_column, fontweight ='bold')
+            ax.set_zlabel(self.zaxis_column, fontweight ='bold')
+
+            dtype_xaxis = str(df[self.xaxis_column].dtype)
+
+            if dtype_xaxis == 'object':
+                df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
+                df.sort_values(by=[self.xaxis_column],inplace=True)
+                #okreslamy zakres czasowy 
+                minvals = df.min()
+                min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
+                maxvals = df.max()
+                # If date
+                max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+                d = max - min # okres
+
+                #ile jest minut od pocztku pierwszego do koca ostatniego wykadu
+                dminutes = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+
+                ax.set_xlim(0,dminutes)
+                start_times = []
+
+                odstep_min = 60
+                if dminutes > 2000:
+                    odstep_min = 120
+                if dminutes > 3000:
+                    odstep_min = 240
+
+                for m in range(0,dminutes,odstep_min):
+                    hour = int(min.hour + m/60 ) % 24
+                    ddd = min.hour*60 + min.minute + m
+                    day = int(min.day + ddd/60/24 )
+                    month = min.month
+                    start_times.append(str(day)+"/"+str(month) + "  "+str(hour)+":00")
+
+                self.X = np.arange(0,dminutes,odstep_min)
+                ax.set_xticks(self.X)
+                ax.set_xticklabels(start_times, rotation='vertical', fontsize=9)
+
+                #lista osób prowadzacych zajęcia
+                profesors = df[self.yaxis_column].unique()
+                ax.set_ylim(0,len(profesors))
+                self.Y = np.arange(0,len(profesors),1)
+                ax.set_yticks(self.Y)
+                ax.set_yticklabels(profesors, fontsize=10)
+
+                #lista sal
+                rooms = df[self.zaxis_column].unique()
+                ax.set_zlim(0,len(rooms))
+                self.Z = np.arange(0,len(rooms),1)
+                ax.set_zticks(self.Z)
+                ax.set_zticklabels(rooms, fontsize=10)
+
+                self.axes = ax
+                colors =['blue','red','green','yellow','orange','violet','peru','pink']
+
+                #losuj pozostale kolory
+                for i in range(0,60):
+                    random_color = list(np.random.random(size=3) ) 
+                    colors.append(random_color)
+
+                try:
+                    for index, row in df.iterrows():
+                        prof     = row[self.yaxis_column]
+                        room     = row[self.zaxis_column]
+                        start    = row[self.xaxis_column]
+                        duration = row[self.duration_column]
+
+                        d = start - min
+                        startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+
+                        y = np.where(profesors == prof)[0][0]
+                        z = np.where(rooms == room)[0][0]
+                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
+                        
+                    plt.title("Schedule")
+                    if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
+
+                    if tool == "draw":
+                        plt.show()
+                    elif tool == "cut":
+                        tmap = TimelineMapper(start_times, self.X)
+                        dates = tmap.get_all_dates()
+                        
+                        settings = CutChartSettings(self.adapter, dates)
+                        settings.start()
+                        selected_date = self.adapter.get('cut-chart-setting-date')
+                        selected_time = self.adapter.get('cut-chart-setting-time')
+
+                        point = tmap.get_point(f"{selected_date} {selected_time}")
+                        slaby = Slab(self.axes)
+                        modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
+                        self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
+                        plt.show()
             
-            #ile jest minut od pocztku pierwszego do koca ostatniego wykadu
-            dminutes = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+                except Exception as e:
+                    messagebox.showerror("Błąd","Bład podczas tworzenia plot_chartu\r\n"+traceback.format_exc())
 
-            ax.set_xlim(0,dminutes)
-            czasy_rozpoczecia = []
-        
-            odstep_min = 60
-            if dminutes > 2000:
-                odstep_min = 120
-            if dminutes > 3000:
-                odstep_min = 240
 
-            for m in range(0,dminutes,odstep_min):
-                hour = int(min.hour + m/60 ) % 24
-                ddd = min.hour*60 + min.minute + m
-                day = int(min.day + ddd/60/24 )
-                month = min.month
-                czasy_rozpoczecia.append(str(day)+"/"+str(month) + "  "+str(hour)+":00")
+            elif dtype_xaxis in ['float64', 'int64']:
 
-            self.X = np.arange(0,dminutes,odstep_min)
-            ax.set_xticks(self.X)
-            ax.set_xticklabels(czasy_rozpoczecia, rotation='vertical', fontsize=9)
+                df.sort_values(by=[self.xaxis_column],inplace=True)
+                #okreslamy zakres czasowy 
+                minvals = df.min()
+                min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
+                maxvals = df.max()
 
-            #lista osób prowadzacych zajęcia
-            profesors = df[self.kolumna_profesor].unique()
-            ax.set_ylim(0,len(profesors))
-            self.Y = np.arange(0,len(profesors),1)
-            ax.set_yticks(self.Y)
-            ax.set_yticklabels(profesors, fontsize=10)
+                # If it's an integer or float value
+                max = maxvals[self.xaxis_column]+maxvals[self.duration_column]/1000
+                print(f"max value: {max}")
+                d = max-min
+                #interval = 1000
+                self.X = []
+                for i in range(0, int(max), 5):
+                    self.X.append(i)
 
-            #lista sal
-            rooms = df[self.kolumna_sala].unique()
-            ax.set_zlim(0,len(rooms))
-            self.Z = np.arange(0,len(rooms),1)
-            ax.set_zticks(self.Z)
-            ax.set_zticklabels(rooms, fontsize=10)
+                self.X = np.array(self.X)
+                print(f"X array: {self.X}")
 
-            self.axes = ax
-            colors =['blue','red','green','yellow','orange','violet','peru','pink']
+                ax.set_xticks(self.X)
+                ax.set_xticklabels(self.X, rotation='vertical', fontsize=9)
+                ax.set_xlim(0, int(max))
 
-            #losuj pozostale kolory
-            for i in range(0,60):
-                random_color = list(np.random.random(size=3) ) 
-                colors.append(random_color)
+                #lista osób prowadzacych zajęcia
+                profesors = df[self.yaxis_column].unique()
+                ax.set_ylim(0,len(profesors))
+                self.Y = np.arange(0,len(profesors),1)
+                ax.set_yticks(self.Y)
+                ax.set_yticklabels(profesors, fontsize=10)
 
-            try:
-                for index, row in df.iterrows():
-                    prof     = row[self.kolumna_profesor]
-                    room     = row[self.kolumna_sala]
-                    start    = row[self.kolumna_czas_rozpoczecia]
-                    duration = row[self.kolumna_czas_trwania]
+                #lista sal
+                rooms = df[self.zaxis_column].unique()
+                ax.set_zlim(0,len(rooms))
+                self.Z = np.arange(0,len(rooms),1)
+                ax.set_zticks(self.Z)
+                ax.set_zticklabels(rooms, fontsize=10)
 
-                    d = start - min
-                    startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+                self.axes = ax
+                colors =['blue','red','green','yellow','orange','violet','peru','pink']
 
-                    y = np.where(profesors == prof)[0][0]
+                #losuj pozostale kolory
+                for i in range(0,60):
+                    random_color = list(np.random.random(size=3) ) 
+                    colors.append(random_color)
 
-                    z = np.where(rooms == room)[0][0]
+                try:
+                    for index, row in df.iterrows():
+                        prof     = row[self.yaxis_column]
+                        room     = row[self.zaxis_column]
+                        start    = row[self.xaxis_column]
+                        duration = row[self.duration_column]
 
-                    self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
-                       
-                plt.title("Schedule")
-                if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
+                        y = np.where(profesors == prof)[0][0]
+                        z = np.where(rooms == room)[0][0]
+                        plot_pos = (start+(duration/1000),y,z)
 
-                if tool == "draw":
-                    plt.show()
-                elif tool == "cut":
-                    tmap = TimelineMapper(czasy_rozpoczecia, self.X)
-                    dates = tmap.get_all_dates()
-                    
-                    settings = CutChartSettings(self.adapter, dates)
-                    settings.start()
-                    selected_date = self.adapter.get('cut-chart-setting-date')
-                    selected_time = self.adapter.get('cut-chart-setting-time')
+                        print(plot_pos)
+                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=colors[y], ax=ax)
+                        
+                    plt.title("Schedule")
+                    if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
 
-                    point = tmap.get_point(f"{selected_date} {selected_time}")
-                    slaby = Slab(self.axes)
-                    modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
-                    self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
-                    plt.show()
-        
-            except Exception as e:
-                messagebox.showerror("Błąd","Bład podczas tworzenia wykresu\r\n"+traceback.format_exc())
+                    if tool == "draw":
+                        plt.show()
+
+                    elif tool == "cut":
+                        settings = CutChartNumericalSettings(self.adapter)
+                        settings.start()
+                        xpoint = float(self.adapter.get('cut-chart-setting-point'))
+
+                        slaby = Slab(self.axes)
+                        modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
+                        self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
+                        plt.show()
+            
+                except Exception as e:
+                    messagebox.showerror("Error "," Error while creating the chart \r\n"+traceback.format_exc())
 
         except Exception as e:
-            messagebox.showerror("Błąd","Bład w obliczeniach do wykresu\r\n"+traceback.format_exc())
+            messagebox.showerror("Error", "Error in calculations for the graph \r \n"+traceback.format_exc())
 
 
-    def okno_wybor_kolumn(self, column_names):
-        dlg = tk.Toplevel(master=self, bg='light cyan', pady=0)
-        dlg.geometry('750x300+100+100')
-        dlg.title("Choice of columns")    
-        dlg.transient(self)   
-        dlg.grab_set()    
+    def open_column_selection(self):
+        col_selection_window = ColumnSelectionWindow(self.adapter, dataframe=self.df, title="Column Selection", size=(1000,500))
+        col_selection_window.update_dropdown(list(self.df.keys()))
+        col_selection_window.start()
 
-        ypos = 60
+        self.zaxis_column    = self.adapter.get('zaxis')
+        self.yaxis_column    = self.adapter.get('yaxis')
+        self.xaxis_column    = self.adapter.get('xaxis')
+        self.duration_column = self.adapter.get('duration')
+        self.xaxis_dtype     = self.adapter.get('xaxis_type')
+        self.duration_dtype  = self.adapter.get('duration_type')
 
-        label1 = ttk.Label(dlg, text = "Column Object")
-        label1.place(x=40,y=ypos)
-        combo1 = ttk.Combobox(dlg, state="readonly")
-        combo1.set(column_names[0])
-        combo1['values'] = column_names
-        combo1.place(x=200,y=ypos)
-        ypos +=30
+        if self.adapter.ispresent('range_window_opened'):
+            self.yaxis_min = self.adapter.get('yaxis_min')
+            self.zaxis_min = self.adapter.get('zaxis_min')
+            self.xaxis_min = self.adapter.get('xaxis_min')
 
-        label2 = ttk.Label(dlg, text = "Column Space")
-        label2.place(x=40,y=ypos)
-        combo2 = ttk.Combobox(dlg, state="readonly")
-        combo2.set(column_names[1])
-        combo2['values'] = column_names
-        combo2.place(x=200,y=ypos)
-        ypos +=30
-
-        label3 = ttk.Label(dlg, text = "Column Startring time")
-        label3.place(x=40,y=ypos)
-        combo3 = ttk.Combobox(dlg, state="readonly")
-        combo3.set(column_names[2])
-        combo3['values'] = column_names
-        combo3.place(x=200,y=ypos)
-        ypos +=30
-
-        label4 = ttk.Label(dlg, text = "Column duration (min)")
-        label4.place(x=40,y=ypos)
-        combo4 = ttk.Combobox(dlg, state="readonly")
-        combo4.set(column_names[3])
-        combo4['values'] = column_names
-        combo4.place(x=200,y=ypos)
-        ypos +=30
-
-        label5 = ttk.Label(dlg, text = "Time of stop")
-        label5.place(x=40,y=ypos)
-        combo5 = ttk.Combobox(dlg, state="readonly")
-        combo5.set(column_names[4])
-        combo5['values'] = column_names
-        combo5.place(x=200,y=ypos)
-        ypos +=30
-
-        def zamknij():
-            self.kolumna_profesor = combo1.get()
-            self.kolumna_sala = combo2.get()
-            self.kolumna_czas_rozpoczecia=combo3.get()
-            self.kolumna_czas_trwania=combo4.get()
-            self.kolumna_czas_zakonczenia=combo5.get()
-            self.choice_is_null = False        
-            dlg.destroy()
-
-        btn_ok = ttk.Button(dlg, text = "OK", command = zamknij)
-        btn_ok.place(x=140,y=250)
-
-        self.wait_window(dlg) 
-
+            self.yaxis_max = self.adapter.get('yaxis_max')
+            self.zaxis_max = self.adapter.get('zaxis_max')
+            self.xaxis_max = self.adapter.get('xaxis_max')
+            self.adapter.delete('range_window_opened')
 
     def show_options(self):
         styler = ChartifyStyler(self, self.sheet, figure=self.fig)
@@ -380,16 +429,63 @@ class ChartifyAppExtended(tk.Tk):
         self.saver.save_cache(self.cache)
 
 
+    def insert_new_column(self):
+        """Inserts a new column into spreadsheet."""
+        insert_window = InsertWindow(self.adapter, "new_col", title="Insert Column", size=(400,200), _type="column")
+        insert_window.start()
+        new_col = self.adapter.get("new_col")
+        self.df[new_col] = np.array(["" for i in range(0, len(self.df))])
+        # Set the newly inserted data.
+        df_rows = self.df.to_numpy().tolist()  
+        self.sheet.headers(self.df.columns.tolist())
+        self.sheet.set_sheet_data(df_rows)
+
+
+    def insert_row(self):
+        """Inserts a row into spreadsheet."""
+        df_cols = self.df.columns.tolist()
+        df_dtypes = [self.df[col].dtype for col in self.df]
+        print(df_dtypes)
+
+        insert_window = InsertRowWindow(self.adapter, df_cols, 'Insert Row', size=(400, len(df_cols)*50))
+        insert_window.start()
+
+        vals = []
+        for row in df_cols:
+            vals.append(self.adapter.get(row))
+        self.df = self.df.append(pandas.DataFrame([vals], columns=df_cols), ignore_index=True)
+
+        for i in range(0, len(df_cols)):
+            self.df[df_cols[i]] = self.df[df_cols[i]].astype(df_dtypes[i])
+
+        df_rows = self.df.to_numpy().tolist()
+        self.sheet.headers(self.df.columns.tolist())
+        self.sheet.set_sheet_data(df_rows)
+
+
+    def delete_column(self):
+        """Deletes a column from spreadsheet."""
+        delete_window = InsertWindow(self.adapter, "del_col", title="Delete Column", size=(400,200), _type="column")
+        delete_window.start()
+        new_col = self.adapter.get("del_col")
+        del self.df[new_col]
+        # Set the newly modified data.
+        df_rows = self.df.to_numpy().tolist()  
+        self.sheet.headers(self.df.columns.tolist())
+        self.sheet.set_sheet_data(df_rows)
+        
+
+
     def detect_collision(self):
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns=sheet_headers) 
-        self.okno_wybor_kolumn(list(df.columns))
+        self.open_column_selection(list(df.columns))
 
-        detector = CollisionDetector(time_start=df[self.kolumna_czas_rozpoczecia],
-                                     time_end=df[self.kolumna_czas_zakonczenia],
-                                     coll_space=df[self.kolumna_sala],
-                                     coll_obj=df[self.kolumna_profesor])
+        detector = CollisionDetector(time_start=df[self.xaxis_column],
+                                     time_end=df[self.end_column],
+                                     coll_space=df[self.zaxis_column],
+                                     coll_obj=df[self.yaxis_column])
         report = detector.detect()
         detector.reset()
 
@@ -398,11 +494,11 @@ class ChartifyAppExtended(tk.Tk):
 
 
     def draw3d_chart(self):
-        self.wykres(tool="draw")
+        self.plot_chart(tool="draw")
 
 
     def insert_slab(self):
-        self.wykres(tool="cut")
+        self.plot_chart(tool="cut")
 
 
     def start(self):
@@ -411,4 +507,5 @@ class ChartifyAppExtended(tk.Tk):
 
 if __name__ == "__main__":
     obj = ChartifyAppExtended()
+    obj.load_file(r"C:\Users\Aquib\Projects\fiverr-projects\augustino\chartify\requirements\3DCHARTS_ENG_DOCS\time_and_distnace14V.csv")
     obj.start()
