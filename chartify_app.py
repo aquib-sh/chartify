@@ -43,6 +43,12 @@ class ChartifyAppExtended(tk.Tk):
         self.df = None
         self.sheet_font  = None
         self.sheet_fsize = None
+        self.yaxis_min = None
+        self.zaxis_min = None
+        self.xaxis_min = None
+        self.yaxis_max = None
+        self.zaxis_max = None
+        self.xaxis_max = None
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
         self.saver = CacheSaver()
         self.retriever = CacheRetriever()
@@ -204,13 +210,22 @@ class ChartifyAppExtended(tk.Tk):
 
             if dtype_xaxis == 'object':
                 df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
-                df.sort_values(by=[self.xaxis_column],inplace=True)
+                df.sort_values(by=[self.xaxis_column], inplace=True)
                 #okreslamy zakres czasowy 
                 minvals = df.min()
-                min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
                 maxvals = df.max()
+
+                if self.xaxis_min != None:
+                    min = pandas.to_datetime(self.xaxis_min)
+                else:
+                    min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
+                
+                if self.xaxis_max != None:
+                    max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+                else:
+                    max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+                
                 # If date
-                max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
                 d = max - min # okres
 
                 #ile jest minut od pocztku pierwszego do koca ostatniego wykadu
@@ -238,13 +253,20 @@ class ChartifyAppExtended(tk.Tk):
 
                 #lista osób prowadzacych zajęcia
                 profesors = df[self.yaxis_column].unique()
+
+                if self.yaxis_min != None and self.yaxis_max != None:
+                     profesors = [prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)]
+
                 ax.set_ylim(0,len(profesors))
                 self.Y = np.arange(0,len(profesors),1)
                 ax.set_yticks(self.Y)
                 ax.set_yticklabels(profesors, fontsize=10)
 
-                #lista sal
                 rooms = df[self.zaxis_column].unique()
+
+                if self.zaxis_min != None and self.zaxis_max != None:
+                     rooms = [room for room in rooms if (room >= self.zaxis_min) and (room <= self.zaxis_max)]
+
                 ax.set_zlim(0,len(rooms))
                 self.Z = np.arange(0,len(rooms),1)
                 ax.set_zticks(self.Z)
@@ -265,11 +287,38 @@ class ChartifyAppExtended(tk.Tk):
                         start    = row[self.xaxis_column]
                         duration = row[self.duration_column]
 
+                        # If elements are out of range for any of 3 axis then skip to next.
+                        if (
+                            ((self.yaxis_min != None and self.yaxis_max != None) 
+                            and ((prof < self.yaxis_min) or prof > (self.yaxis_max))
+                            )
+
+                            or
+
+                            ((self.xaxis_min != None and self.xaxis_max != None)
+                            and (pandas.to_datetime(start) < pandas.to_datetime(self.xaxis_min) or (pandas.to_datetime(start) > pandas.to_datetime(self.xaxis_max)))
+                            )
+
+                            or
+
+                            ((self.zaxis_min != None and self.zaxis_max != None) 
+                            and ((room < self.zaxis_min) or (room > self.zaxis_max))
+                            )
+                            ) : continue
+
                         d = start - min
                         startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
 
-                        y = np.where(profesors == prof)[0][0]
-                        z = np.where(rooms == room)[0][0]
+                        print(f"prof_li : {profesors}\nprof:{prof}")
+                        print(f"prof_li : {type(profesors)}\nprof:{type(prof)}")
+
+                        print(f"rooms : {rooms}\nroom:{room}")
+                        print(f"rooms : {type(rooms)}\nroom:{type(room)}")
+
+                        print(profesors)
+                        print(prof)
+                        y = np.where(np.array(profesors) == prof)[0][0]
+                        z = np.where(np.array(rooms) == room)[0][0]
                         self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
                         
                     plt.title("Schedule")
@@ -301,27 +350,30 @@ class ChartifyAppExtended(tk.Tk):
                 df.sort_values(by=[self.xaxis_column],inplace=True)
                 #okreslamy zakres czasowy 
                 minvals = df.min()
-                min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
                 maxvals = df.max()
 
-                # If it's an integer or float value
-                max = maxvals[self.xaxis_column]+maxvals[self.duration_column]/1000
-                print(f"max value: {max}")
-                d = max-min
-                #interval = 1000
+                if self.xaxis_min : min = float(self.xaxis_min)
+                else : min = 0
+
+                if self.xaxis_max : max = float(self.xaxis_max) + maxvals[self.duration_column]/1000
+                else : max = maxvals[self.xaxis_column] + maxvals[self.duration_column]/1000
+
                 self.X = []
-                for i in range(0, int(max), 5):
+                for i in range(int(min), int(max), 5):
                     self.X.append(i)
 
                 self.X = np.array(self.X)
-                print(f"X array: {self.X}")
-
+            
                 ax.set_xticks(self.X)
                 ax.set_xticklabels(self.X, rotation='vertical', fontsize=9)
                 ax.set_xlim(0, int(max))
 
                 #lista osób prowadzacych zajęcia
                 profesors = df[self.yaxis_column].unique()
+
+                if self.yaxis_min != None and self.yaxis_max != None:
+                     profesors = [prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)]
+
                 ax.set_ylim(0,len(profesors))
                 self.Y = np.arange(0,len(profesors),1)
                 ax.set_yticks(self.Y)
@@ -329,6 +381,10 @@ class ChartifyAppExtended(tk.Tk):
 
                 #lista sal
                 rooms = df[self.zaxis_column].unique()
+
+                if self.zaxis_min != None and self.zaxis_max != None:
+                     rooms = [room for room in rooms if (room >= self.zaxis_min) and (room <= self.zaxis_max)]
+
                 ax.set_zlim(0,len(rooms))
                 self.Z = np.arange(0,len(rooms),1)
                 ax.set_zticks(self.Z)
@@ -337,6 +393,8 @@ class ChartifyAppExtended(tk.Tk):
                 self.axes = ax
                 colors =['blue','red','green','yellow','orange','violet','peru','pink']
 
+                print(profesors)
+
                 #losuj pozostale kolory
                 for i in range(0,60):
                     random_color = list(np.random.random(size=3) ) 
@@ -344,13 +402,43 @@ class ChartifyAppExtended(tk.Tk):
 
                 try:
                     for index, row in df.iterrows():
+ 
                         prof     = row[self.yaxis_column]
                         room     = row[self.zaxis_column]
                         start    = row[self.xaxis_column]
                         duration = row[self.duration_column]
 
-                        y = np.where(profesors == prof)[0][0]
-                        z = np.where(rooms == room)[0][0]
+                        # If elements are out of range for any of 3 axis then skip to next.
+                        if (
+                            ((self.yaxis_min != None and self.yaxis_max != None) 
+                            and ((prof < self.yaxis_min) or prof > (self.yaxis_max))
+                            )
+
+                            or
+
+                            ((self.xaxis_min != None and self.xaxis_max != None)
+                            and (float(start) < float(self.xaxis_min) or (float(start) > float(self.xaxis_max)))
+                            )
+
+                            or
+
+                            ((self.zaxis_min != None and self.zaxis_max != None) 
+                            and ((room < self.zaxis_min) or (room > self.zaxis_max))
+                            )
+                            ) : continue
+                        
+                        print(f"prof_li : {profesors}\nprof:{prof}")
+                        print(f"prof_li : {type(profesors)}\nprof:{type(prof)}")
+                        _y = np.where(np.array(profesors) == prof)[0]
+                        print(f"rooms : {rooms}\nroom:{room}")
+                        print(f"rooms : {type(rooms)}\nroom:{type(room)}")
+                        
+                        _z = np.where(np.array(rooms) == room)[0]
+
+                        if len(_y) == 0 or len(_z) == 0 : print('skipping');continue
+
+                        y = _y[0]
+                        z = _z[0]
                         plot_pos = (start+(duration/1000),y,z)
 
                         print(plot_pos)
@@ -378,6 +466,13 @@ class ChartifyAppExtended(tk.Tk):
         except Exception as e:
             messagebox.showerror("Error", "Error in calculations for the graph \r \n"+traceback.format_exc())
 
+        self.yaxis_min = None
+        self.zaxis_min = None
+        self.xaxis_min = None
+        self.yaxis_max = None
+        self.zaxis_max = None
+        self.xaxis_max = None
+
 
     def open_column_selection(self):
         col_selection_window = ColumnSelectionWindow(self.adapter, dataframe=self.df, title="Column Selection", size=(1000,500))
@@ -395,7 +490,6 @@ class ChartifyAppExtended(tk.Tk):
             self.yaxis_min = self.adapter.get('yaxis_min')
             self.zaxis_min = self.adapter.get('zaxis_min')
             self.xaxis_min = self.adapter.get('xaxis_min')
-
             self.yaxis_max = self.adapter.get('yaxis_max')
             self.zaxis_max = self.adapter.get('zaxis_max')
             self.xaxis_max = self.adapter.get('xaxis_max')
