@@ -1,6 +1,7 @@
 #Author : Shaikh Aquib
 #Date : June 2021
 
+from datetime import datetime
 import sys
 import tkinter as tk
 from tkinter import ttk
@@ -405,7 +406,14 @@ class ColumnSelectionWindow(TopLevelWindow):
         xaxis_dtype     = self.n5.get()
         duration_dtype  = self.n6.get()
 
-        range_window = RangeSelectionWindow(self.adapter, dataframe=self.df, title="Range Selection", size=(900, 400))
+        print(xaxis_dtype)
+
+        range_window = RangeSelectionWindow(self.adapter, 
+            dataframe=self.df, 
+            title="Range Selection", 
+            size=(900, 400), 
+            datetime=xaxis_dtype != 'Number')
+
         range_window.set_min_max(xstart=xaxis, yaxis=object, zaxis=space)
         range_window.start()
 
@@ -433,8 +441,6 @@ class ColumnSelectionWindow(TopLevelWindow):
         self.adapter.insert('xaxis_type', xaxis_dtype)
         self.adapter.insert('duration_type', duration_dtype)
 
-
-
         self.exit_window()
 
 
@@ -456,10 +462,11 @@ class RangeSelectionWindow(TopLevelWindow):
     size : tuple
         Size of window (x:int, y:int) where x is width and y is height.
     """
-    def __init__(self, adapter, dataframe, title:str, size:tuple):
+    def __init__(self, adapter, dataframe, title:str, size:tuple, datetime=False):
         super(RangeSelectionWindow, self).__init__(title=title, size=size)
         self.adapter = adapter
         self.df = dataframe
+        self.isdaterange = datetime
 
         lbl1_text = 'Y Axis (object):'
         lbl2_text = 'Z Axis (space):'
@@ -482,12 +489,20 @@ class RangeSelectionWindow(TopLevelWindow):
         # ============================= Create 3 Dropdowns ===============================
         self.choice1_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_start)
         self.choice2_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_start)
-        self.choice3_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_start)
+
+        if datetime:
+            self.choice3_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_start)
+        else:
+            self.choice3_start = ttk.Entry(self, width=30)
 
         self.choice1_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_end)
         self.choice2_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_end)
-        self.choice3_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_end)
         
+        if datetime:
+            self.choice3_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_end)
+        else:
+            self.choice3_end = ttk.Entry(self, width=30)
+
         self.choice1_start.grid(row=1, column=1)
         self.choice2_start.grid(row=2, column=1)
         self.choice3_start.grid(row=3, column=1)
@@ -512,20 +527,21 @@ class RangeSelectionWindow(TopLevelWindow):
         zaxis: str
             Z Start column name for DataFrame.
         """
-        self.choice1_start['values'] = self.df[yaxis].sort_values().tolist()
-        self.choice1_end['values']   = self.df[yaxis].sort_values(ascending=False).tolist()
+        self.choice1_start['values'] = self.df[yaxis].sort_values().unique().tolist()
+        self.choice1_end['values']   = self.df[yaxis].sort_values(ascending=False).unique().tolist()
         self.choice1_start.current(0)
         self.choice1_end.current(0)
 
-        self.choice2_start['values'] = self.df[zaxis].sort_values().tolist()
-        self.choice2_end['values']   = self.df[zaxis].sort_values(ascending=False).tolist()
+        self.choice2_start['values'] = self.df[zaxis].sort_values().unique().tolist()
+        self.choice2_end['values']   = self.df[zaxis].sort_values(ascending=False).unique().tolist()
         self.choice2_start.current(0)
         self.choice2_end.current(0)
 
-        self.choice3_start['values'] = self.df[xstart].sort_values().tolist()
-        self.choice3_end['values']   = self.df[xstart].sort_values(ascending=False).tolist()
-        self.choice3_start.current(0)
-        self.choice3_end.current(0)
+        if self.isdaterange:
+            self.choice3_start['values'] = self.df[xstart].sort_values().unique().tolist()
+            self.choice3_end['values']   = self.df[xstart].sort_values(ascending=False).unique().tolist()
+            self.choice3_start.current(0)
+            self.choice3_end.current(0)
 
 
     def transfer_value_and_destroy(self):
@@ -533,11 +549,19 @@ class RangeSelectionWindow(TopLevelWindow):
         self.adapter.insert('range_window_opened', True)
         self.adapter.insert('yaxis_min', self.n1_start.get())
         self.adapter.insert('zaxis_min', self.n2_start.get())
-        self.adapter.insert('xaxis_min', self.n3_start.get())
+    
+        if self.isdaterange:
+            self.adapter.insert('xaxis_min', self.n3_start.get())
+        else:
+            self.adapter.insert('xaxis_min', self.choice3_start.get())
 
         self.adapter.insert('yaxis_max', self.n1_end.get())
         self.adapter.insert('zaxis_max', self.n2_end.get())
-        self.adapter.insert('xaxis_max', self.n3_end.get())
+        
+        if self.isdaterange:
+            self.adapter.insert('xaxis_max', self.n3_end.get())
+        else:
+            self.adapter.insert('xaxis_max', self.choice3_end.get())
 
         self.exit_window()
 
