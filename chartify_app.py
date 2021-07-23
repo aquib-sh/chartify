@@ -13,12 +13,14 @@ import tkinter as tk
 from tkinter.constants import *
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from menus.menubar import MenuBarExtended
 from layouts.frame import WindowFrame
 from layouts.window import ColumnSelectionWindow
 from layouts.window import InsertWindow
 from layouts.window import InsertRowWindow
 from layouts.window import DeleteWindow
+from layouts.window import CustomColorsWindow
 from layouts.window import ChartifyOptions
 from layouts.window import CollisionReport
 from layouts.window import CollisionSettings
@@ -27,6 +29,7 @@ from layouts.window import CutChartNumericalSettings
 from processors.data_adapter import DataAdapter
 from processors.timeline_mapper import TimelineMapper
 from processors.styler import ChartifyStyler
+from processors.cache_memory import CacheProcessor
 from processors.cache_memory import CacheSaver
 from processors.cache_memory import CacheRetriever
 from tools.collision_detector import CollisionDetector
@@ -37,6 +40,7 @@ class ChartifyAppExtended(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(config.title)
+        self.base_file = None
         self.axes = None
         self.fig  = None
         self.fig_bg = None
@@ -51,6 +55,7 @@ class ChartifyAppExtended(tk.Tk):
         self.xaxis_max = None
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
         self.saver = CacheSaver()
+        self.color_cache = CacheProcessor("colors.db", "colors")
         self.retriever = CacheRetriever()
 
         if self.retriever.cache_exists():
@@ -95,6 +100,12 @@ class ChartifyAppExtended(tk.Tk):
         self.end_column='Czas zakończenia'
         self.duration_column='Czas trwania (min)'
 
+        self.colors =['blue','red','green','yellow','orange','violet','peru','pink']
+
+        #losuj pozostale kolory
+        for i in range(0,60):
+            random_color = list(np.random.random(size=3) ) 
+            self.colors.append(random_color)
 
     def open_file(self):
         """Opens up file chooser to select the file
@@ -107,9 +118,7 @@ class ChartifyAppExtended(tk.Tk):
             return
     
         current_file_name = file_name
-        base_file = os.path.basename(current_file_name)
         self.load_file(current_file_name)
-        self.title(f"{base_file} - Chartify")
         self.choice_is_null = True
 
 
@@ -124,6 +133,8 @@ class ChartifyAppExtended(tk.Tk):
         self.sheet.headers(self.df.columns.tolist())
         self.sheet.set_sheet_data(df_rows)
         self.current_file_name = filename
+        self.base_file = os.path.basename(filename)
+        self.title(f"{self.base_file} - Chartify")
 
 
     def save_file(self):
@@ -183,11 +194,11 @@ class ChartifyAppExtended(tk.Tk):
     def plotCubeAt(self, pos=(0,0,0),size=(1,1,1),color='b', ax=None):
         if ax !=None:
             x, y, z = self.cuboid_data(pos,size )
-            print(x,y,z)
+            print(color)
             ax.plot_surface(x,y,z, color=color)
 
 
-    def plot_chart(self, tool="draw"):
+    def plot_chart(self, tool="draw", fig_present=False):
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
@@ -197,10 +208,15 @@ class ChartifyAppExtended(tk.Tk):
         df[self.duration_column] = pandas.to_numeric(df[self.duration_column])
 
         try:
-            fig = plt.figure(figsize=(6,6))
-            self.fig = fig
-            fig.canvas.manager.set_window_title('Schedule')
-            ax = fig.add_subplot(projection='3d')
+            if not fig_present:
+                fig = plt.figure(figsize=(6,6))
+                self.fig = fig
+
+                self.fig.canvas.manager.set_window_title(self.base_file)
+                ax = fig.add_subplot(projection='3d')
+                self.axes = ax
+
+            ax = self.axes
 
             ax.set_xlabel(self.xaxis_column, fontweight ='bold',labelpad=30)
             ax.set_ylabel(self.yaxis_column, fontweight ='bold')
@@ -273,12 +289,7 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zticklabels(rooms, fontsize=10)
 
                 self.axes = ax
-                colors =['blue','red','green','yellow','orange','violet','peru','pink']
 
-                #losuj pozostale kolory
-                for i in range(0,60):
-                    random_color = list(np.random.random(size=3) ) 
-                    colors.append(random_color)
 
                 try:
                     for index, row in df.iterrows():
@@ -309,17 +320,9 @@ class ChartifyAppExtended(tk.Tk):
                         d = start - min
                         startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
 
-                        print(f"prof_li : {profesors}\nprof:{prof}")
-                        print(f"prof_li : {type(profesors)}\nprof:{type(prof)}")
-
-                        print(f"rooms : {rooms}\nroom:{room}")
-                        print(f"rooms : {type(rooms)}\nroom:{type(room)}")
-
-                        print(profesors)
-                        print(prof)
                         y = np.where(np.array(profesors) == prof)[0][0]
                         z = np.where(np.array(rooms) == room)[0][0]
-                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=colors[y], ax=ax)
+                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=self.colors[y], ax=ax)
                         
                     plt.title("Schedule")
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
@@ -339,7 +342,9 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
-                        plt.show()
+
+                        if fig_present : plt.draw()
+                        else : plt.show()
             
                 except Exception as e:
                     messagebox.showerror("Błąd","Bład podczas tworzenia plot_chartu\r\n"+traceback.format_exc())
@@ -390,15 +395,7 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zticks(self.Z)
                 ax.set_zticklabels(rooms, fontsize=10)
 
-                self.axes = ax
-                colors =['blue','red','green','yellow','orange','violet','peru','pink']
-
-                print(profesors)
-
-                #losuj pozostale kolory
-                for i in range(0,60):
-                    random_color = list(np.random.random(size=3) ) 
-                    colors.append(random_color)
+                self.axes = ax               
 
                 try:
                     for index, row in df.iterrows():
@@ -427,22 +424,17 @@ class ChartifyAppExtended(tk.Tk):
                             )
                             ) : continue
                         
-                        print(f"prof_li : {profesors}\nprof:{prof}")
-                        print(f"prof_li : {type(profesors)}\nprof:{type(prof)}")
                         _y = np.where(np.array(profesors) == prof)[0]
-                        print(f"rooms : {rooms}\nroom:{room}")
-                        print(f"rooms : {type(rooms)}\nroom:{type(room)}")
-                        
+
                         _z = np.where(np.array(rooms) == room)[0]
 
-                        if len(_y) == 0 or len(_z) == 0 : print('skipping');continue
+                        if len(_y) == 0 or len(_z) == 0 : continue
 
                         y = _y[0]
                         z = _z[0]
                         plot_pos = (start+(duration/1000),y,z)
 
-                        print(plot_pos)
-                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=colors[y], ax=ax)
+                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=self.colors[y], ax=ax)
                         
                     plt.title("Schedule")
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
@@ -458,7 +450,9 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
-                        plt.show()
+            
+                        if fig_present : plt.draw()
+                        else : plt.show()
             
                 except Exception as e:
                     messagebox.showerror("Error "," Error while creating the chart \r\n"+traceback.format_exc())
@@ -495,12 +489,21 @@ class ChartifyAppExtended(tk.Tk):
             self.xaxis_max = self.adapter.get('xaxis_max')
             self.adapter.delete('range_window_opened')
 
+        self.choice_is_null = False
+
+
     def show_options(self):
         styler = ChartifyStyler(self, self.sheet, figure=self.fig)
         fonts = styler.get_all_fonts()
-        opts = ChartifyOptions(self.adapter)
+        if self.choice_is_null : self.open_column_selection()
+        cols = list(self.df[self.yaxis_column].unique())
+        db_colors = self.color_cache.retrieve_cache()
+
+        opts = ChartifyOptions(self.adapter, cols, db_colors)
         opts.add_fonts(fonts)
         opts.start()
+
+        print(self.adapter)
 
         tbl_font  = self.adapter.get("table-font")
         tbl_fsize = self.adapter.get("table-font-size")
@@ -523,6 +526,24 @@ class ChartifyAppExtended(tk.Tk):
         self.saver.save_cache(self.cache)
 
 
+    def open_custom_colors_window(self):
+        custom_colors_window = CustomColorsWindow(self.adapter)
+        custom_colors_window.start()
+
+        if not self.adapter.ispresent('colorname') : pass
+        else:
+            colorname = self.adapter.get("colorname")
+            red = self.adapter.get("red")
+            green = self.adapter.get("green")
+            blue = self.adapter.get("blue")
+            alpha = self.adapter.get("alpha")
+            self.color_cache.insert_cache(colorname, (red, green, blue, alpha))
+            print(self.color_cache.retrieve_cache())
+
+    def refresh(self):
+        self.plot_chart(fig_present=True)
+
+
     def insert_new_column(self):
         """Inserts a new column into spreadsheet."""
         insert_window = InsertWindow(self.adapter, "new_col", title="Insert Column", size=(400,200), _type="column")
@@ -539,7 +560,6 @@ class ChartifyAppExtended(tk.Tk):
         """Inserts a row into spreadsheet."""
         df_cols = self.df.columns.tolist()
         df_dtypes = [self.df[col].dtype for col in self.df]
-        print(df_dtypes)
 
         insert_window = InsertRowWindow(self.adapter, df_cols, 'Insert Row', size=(400, len(df_cols)*50))
         insert_window.start()
@@ -568,7 +588,6 @@ class ChartifyAppExtended(tk.Tk):
         self.sheet.headers(self.df.columns.tolist())
         self.sheet.set_sheet_data(df_rows)
         
-
 
     def detect_collision(self):
         sheet_data    = self.sheet.get_sheet_data()
