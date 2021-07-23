@@ -17,5 +17,20 @@ class DataAdapter:
     def keys(self):
         return tuple(self._dict.keys())
 
+    def values(self):
+        return tuple(self._dict.values())
+
+    def adapter_length(self):
+        return len(self.keys())
+
     def ispresent(self, _key):
         return _key in self._dict
+
+    def __str__(self) -> str:
+        _str = "{\n"
+        keys = self.keys()
+        values = self.values()
+        adapter_len = self.adapter_length()
+        for i in range(adapter_len) : _str += f"{keys[i]:<20}:\t{values[i]}, \n"
+        _str += "}"
+        return _str
