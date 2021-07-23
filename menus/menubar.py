@@ -112,7 +112,6 @@ class MenuBarExtended(tk.Menu):
         editmenu.add_cascade(label="Clear", menu=clearmenu)
 
         #Row, column options for insert, delete and clear
-
         insertmenu.add_command(label="Row", command=self.master.insert_row)
         insertmenu.add_command(label="Column", command=self.master.insert_new_column)
         
@@ -130,10 +129,12 @@ class MenuBarExtended(tk.Menu):
         chartmenu.add_cascade(label="Draw Chart", menu=draw_chart_menu)
         
         draw_chart_menu.add_command(label="Chart3D", command=self.master.draw3d_chart)
-        draw_chart_menu.add_command(label="Refresh", command=None)
+        draw_chart_menu.add_command(label="Select Columns", command=self.master.open_column_selection)
+        draw_chart_menu.add_command(label="Refresh", command=self.master.refresh)
 
         # Add options to run tools on data in tools menu
         toolsmenu.add_command(label="Detect Collision", command=self.master.detect_collision)
         toolsmenu.add_command(label="Cut Chart", command=self.master.insert_slab)
 
         optionsmenu.add_command(label="Settings", command=self.master.show_options)
+        optionsmenu.add_command(label="Define Custom Colors", command=self.master.open_custom_colors_window)
