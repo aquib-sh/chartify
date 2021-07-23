@@ -4,8 +4,9 @@
 from datetime import datetime
 import sys
 import tkinter as tk
-from tkinter import ttk
-from tkinter.constants import BOTTOM, CENTER, LEFT, END
+from tkinter import Scrollbar, ttk
+from tkinter import messagebox
+from tkinter.constants import BOTTOM, CENTER, E, LEFT, END, RIGHT, W, Y
 sys.path.append('../')
 from tkinter import Label, Button, Text
 
@@ -391,7 +392,7 @@ class ColumnSelectionWindow(TopLevelWindow):
         self.dropdowns = (self.choice1, self.choice2, self.choice3, self.choice4)
         self.text_vars = (self.n1, self.n2, self.n3, self.n4)
 
-        build_btn = ttk.Button(self, text="BUILD", command=self.transfer_value_and_destroy)
+        build_btn = ttk.Button(self, text="BUILD/APPLY", command=self.transfer_value_and_destroy)
         range_btn = ttk.Button(self, text="SELECT MIN-MAX RANGE", command=self.open_range_window)
         build_btn.grid(row=6, column=0, padx=(100, 0), pady=(150,100))
         range_btn.grid(row=6, column=1, padx=(100, 0), pady=(150,100))
@@ -660,14 +661,20 @@ class ChartifyOptions(TopLevelWindow):
 
     size: tuple (default=(400, 400))
         Size of the window.
+
+    yaxis: list | tuple
+        unique vals in yaxis, to set the bar color window.
     """
-    def __init__(self, adapter, title="Chartify Options", size=(400,400)):
+    def __init__(self, adapter, yaxis, saved_colors, title="Chartify Options", size=(400,400)):
         super(ChartifyOptions, self).__init__(title=title, size=size)
         self.adapter = adapter
-        
+        self.yaxis_vals = yaxis
+        self.saved_colors = saved_colors
+
         ttk.Label(self, text="Table Font:")      .grid(row=0, column=0, sticky='W', pady=(0, 50))
         ttk.Label(self, text="Graph Background:").grid(row=1, column=0, sticky='W', pady=(0, 50))
         ttk.Label(self, text="Table Font Size:") .grid(row=2, column=0, sticky='W', pady=(0, 50))
+
         #ttk.Label(self, text="Chart label font size:") .grid(row=4, column=0, sticky='W')
         #ttk.Label(self, text="Table Background:")      .grid(row=1, column=0, sticky='W')
 
@@ -700,14 +707,21 @@ class ChartifyOptions(TopLevelWindow):
         #self.chart_lbl_fsize['values'] = list(i for i in range(10, 20))
 
         apply_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        set_bar_colors_btn = ttk.Button(self, text="Set Bar Colors", command=self.open_bar_colors_window)
         close_btn = ttk.Button(self, text="Close", command=self.destroy_window)
-        apply_btn.grid(row=5, column=0, padx=(0, 100), pady=(100,0))
-        close_btn.grid(row=5, column=1, padx=(100, 0), pady=(100,0))
-
+        apply_btn.grid(row=5, column=0, padx=(0, 50), pady=(100,0))
+        set_bar_colors_btn.grid(row=5, column=1, pady=(100,0))
+        close_btn.grid(row=5, column=2, padx=(50, 0), pady=(100,0))
+        
 
     def add_fonts(self, fonts: list):
         self.table_font['values'] = fonts
 
+
+    def open_bar_colors_window(self):
+        bar_settings_window = BarColorSettings(self.adapter, self.yaxis_vals, self.saved_colors)
+        bar_settings_window.start()
+        
 
     def transfer_value_and_destroy(self):
         """Inserts the textbox value into the adapter."""
@@ -718,8 +732,141 @@ class ChartifyOptions(TopLevelWindow):
         #self.adapter.insert("chart-label-font-size", self.chart_lbl_fsize.get())
         self.exit_window()
 
+
     def destroy_window(self) -> None:        
         self.adapter.insert("table-font",       None)
         self.adapter.insert("graph-background", None)
         self.adapter.insert("table-font-size",  None)
         self.exit_window()
+
+
+class BarColorSettings(TopLevelWindow):
+    """Sets the color for bars in chart.
+    
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    yaxis: list
+        List of Y-Axis columns
+
+    saved_colors: dict
+        Dictionary of colors retrieved from database.
+
+    title: str (default="Chartify Options")
+        Title for window.
+
+    size: tuple (default=(400, 400))
+        Size of the window.
+
+    yaxis: list | tuple
+        unique vals in yaxis, to set the bar color window.
+    """
+    def __init__(self, adapter, yaxis, saved_colors: dict, title="Bar Color Settings", size=(400,400)):
+        super(BarColorSettings, self).__init__(title=title, size=size)
+        self.adapter = adapter
+        self.yaxis_vals: list = yaxis
+        self.saved_colors = saved_colors
+        self.n_options: int = len(self.yaxis_vals) # total values in yaxis
+        self.option_ptrs: list = []
+
+        bars_frame = ttk.Frame(self)
+        bars_frame.pack()
+
+        # vscroll = ttk.Scrollbar(bars_frame, orient='vertical')
+        # vscroll.grid(row=0, column=2, sticky=E, padx=(100, 0))
+
+        current_row = 0
+        colors: list = [
+            'red',    'black',  'white', 
+            'green',  'grey',   'blue', 
+            'voilet', 'yellow', 'purple', 
+            'pink',   'peru',   'orange'
+        ]
+
+        colors += list(self.saved_colors.keys())
+
+        for i in range(0, self.n_options):
+            ttk.Label(bars_frame, text=self.yaxis_vals[i]).grid(row=current_row, column=0, pady=(20,0))
+            self.option_ptrs.append(tk.StringVar())
+            ttk.Combobox(bars_frame, state="readonly", textvariable=self.option_ptrs[i], values=colors).grid(row=current_row, column=1, pady=(20,0))
+            current_row += 1
+
+        apply_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        apply_btn.pack(pady=(20,0))
+
+
+    def transfer_value_and_destroy(self):
+        """Inserts the textbox value into the adapter."""
+        for i in range(0, self.n_options):
+            self.adapter.insert(self.yaxis_vals[i], self.option_ptrs[i].get())
+       
+        self.exit_window()
+
+
+
+class CustomColorsWindow(TopLevelWindow):
+    """Sets the color for bars in chart.
+    
+    Parameters
+    ----------
+    adapter: chartify.processors.data_adapter.DataAdapter
+        Data Adapter used to exchange values between this window and the main app window.
+
+    title: str (default="Chartify Options")
+        Title for window.
+
+    size: tuple (default=(400, 400))
+        Size of the window.
+    """
+    def __init__(self, adapter, title="Define Custom Colors", size=(600,300)):
+        super(CustomColorsWindow, self).__init__(title=title, size=size)
+        self.adapter = adapter
+        ttk.Label(self, text="Title").grid(row=0, column=0)
+        
+        self.colorname = ttk.Entry(self, width=43)
+        self.colorname.grid(row=0, column=1, columnspan=4, padx=(20, 0))
+        
+        self.red   = ttk.Entry(self, width=10)
+        self.green = ttk.Entry(self, width=10)
+        self.blue  = ttk.Entry(self, width=10)
+        self.alpha = ttk.Entry(self, width=10)
+
+        ttk.Label(self, text="RGBA value").grid(row=1, column=0)
+        self.red  .grid(row=1, column=1, padx=(20, 0), sticky=W)
+        self.green.grid(row=1, column=2, sticky=W)
+        self.blue .grid(row=1, column=3, sticky=W)
+        self.alpha.grid(row=1, column=4, sticky=W)
+
+        ttk.Label(self, text="Red")  .grid(row=2, column=1, sticky=W, padx=(20, 0))
+        ttk.Label(self, text="Green").grid(row=2, column=2, sticky=W)
+        ttk.Label(self, text="Blue") .grid(row=2, column=3, sticky=W)
+        ttk.Label(self, text="Alpha").grid(row=2, column=4, sticky=W)
+
+        ttk.Label(self, text="value range = (0-1)\nexample: 0.1, 0.5, 1, 0").grid(row=3, column=0, sticky=W)
+    
+        add_btn = ttk.Button(self, text="Add", command=self.transfer_value_and_destroy)
+        add_btn.grid(row=4, column=0, padx=(100, 0), pady=(100, 0))
+
+
+    def transfer_value_and_destroy(self):
+        """Inserts the textbox value into the adapter."""
+
+        colorname = self.colorname.get()
+        red_val = self.red.get()
+        green_val = self.green.get()
+        blue_val = self.blue.get()
+        alpha_val = self.alpha.get()
+
+        li = [colorname, red_val, green_val, blue_val, alpha_val]
+
+        if None in li or '' in li:
+            messagebox.showerror("Error", "boxes cannot be left empty.")
+        else:
+            self.adapter.insert("colorname", colorname)
+            self.adapter.insert("red",   float(red_val))
+            self.adapter.insert("green", float(green_val))
+            self.adapter.insert("blue",  float(blue_val))
+            self.adapter.insert("alpha", float(alpha_val))
+            self.exit_window()
