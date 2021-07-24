@@ -194,7 +194,6 @@ class ChartifyAppExtended(tk.Tk):
     def plotCubeAt(self, pos=(0,0,0),size=(1,1,1),color='b', ax=None):
         if ax !=None:
             x, y, z = self.cuboid_data(pos,size )
-            print(color)
             ax.plot_surface(x,y,z, color=color)
 
 
@@ -322,7 +321,20 @@ class ChartifyAppExtended(tk.Tk):
 
                         y = np.where(np.array(profesors) == prof)[0][0]
                         z = np.where(np.array(rooms) == room)[0][0]
-                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=self.colors[y], ax=ax)
+                        
+                        # Get color from database.
+                        stored_colors = self.color_cache.retrieve_cache()
+
+                        # Check if the colors are from database or from system.
+                        prof = str(prof)
+                        obj_color = self.colors[y]
+                        # If value if present in adapter for current y-axis value.
+                        if self.adapter.ispresent(prof):
+                            obj_color = self.adapter.get(prof)
+                            # If colorname is from a stored_color db then assign the value.
+                            if obj_color in stored_colors : obj_color = stored_colors[obj_color]
+
+                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plt.title("Schedule")
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
@@ -433,8 +445,20 @@ class ChartifyAppExtended(tk.Tk):
                         y = _y[0]
                         z = _z[0]
                         plot_pos = (start+(duration/1000),y,z)
+                        
+                        # Get color from database.
+                        stored_colors = self.color_cache.retrieve_cache()
 
-                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=self.colors[y], ax=ax)
+                        # Check if the colors are from database or from system.
+                        prof = str(prof)
+                        obj_color = self.colors[y]
+                        # If value if present in adapter for current y-axis value.
+                        if self.adapter.ispresent(prof):
+                            obj_color = self.adapter.get(prof)
+                            # If colorname is from a stored_color db then assign the value.
+                            if obj_color in stored_colors : obj_color = stored_colors[obj_color]
+
+                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=obj_color, ax=ax)
                         
                     plt.title("Schedule")
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
