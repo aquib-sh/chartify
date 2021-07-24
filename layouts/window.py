@@ -781,7 +781,7 @@ class BarColorSettings(TopLevelWindow):
         colors: list = [
             'red',    'black',  'white', 
             'green',  'grey',   'blue', 
-            'voilet', 'yellow', 'purple', 
+            'violet', 'yellow', 'purple', 
             'pink',   'peru',   'orange'
         ]
 
