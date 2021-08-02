@@ -31,6 +31,6 @@ class DataAdapter:
         keys = self.keys()
         values = self.values()
         adapter_len = self.adapter_length()
-        for i in range(adapter_len) : _str += f"{keys[i]:<20}:\t{values[i]}, \n"
+        for i in range(adapter_len) : _str += f"{keys[i]:<30}:\t{values[i]}, \n"
         _str += "}"
         return _str
