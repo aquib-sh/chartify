@@ -34,8 +34,8 @@ class CollisionDetector:
         self.inconsis  = []
         self.collisions = []
 
-        self.time_start = pandas.to_datetime(time_start)
-        self.time_end   = pandas.to_datetime(time_end)
+        self.time_start = time_start
+        self.time_end   = time_end
         self.coll_space = coll_space
         self.coll_obj   = coll_obj
 
