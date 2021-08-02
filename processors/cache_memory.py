@@ -14,7 +14,7 @@ class CacheProcessor:
 
         self.table = table
         self.conn = sqlite3.connect(self.__cache_f__)
-        print(f"[+] Connected to database in {self.__cache_f__}")
+        #print(f"[+] Connected to database in {self.__cache_f__}")
         self.cursor = self.conn.cursor()
         self.cursor.execute(f'''CREATE TABLE IF NOT EXISTS {self.table}
             (COLOR TEXT PRIMARY KEY NOT NULL,
@@ -117,7 +117,7 @@ class CacheSaver:
 
     def save_cache(self, cache: dict) -> None:
         with open(self.__cache_f__, "w") as f:
-            json.dump(cache, f)
+            json.dump(cache, f, indent=4)
 
 
 class CacheRetriever:
