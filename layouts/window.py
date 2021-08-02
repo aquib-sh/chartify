@@ -299,12 +299,17 @@ class CollisionReport(TopLevelWindow):
     def __init__(self, report:str, title:str, size:tuple):
         super(CollisionReport, self).__init__(title=title, size=size)
 
+        yscrollbar = ttk.Scrollbar(self)
+        yscrollbar.pack(side=RIGHT, fill=Y)
+
         font_tuple = ("Arial", 15)
         self.report = Text(self, yscrollcommand=True, bg="linen", font=font_tuple)
         self.report.insert(END, report)
         self.report.config(state="disabled")
+        self.report.config(yscrollcommand=yscrollbar.set)
         self.report.pack()
 
+        yscrollbar.config(command=self.report.yview)
 
 
 class ColumnSelectionWindow(TopLevelWindow):
@@ -399,8 +404,8 @@ class ColumnSelectionWindow(TopLevelWindow):
 
 
     def open_range_window(self):
-        space    = self.n1.get()
-        object   = self.n2.get()
+        object   = self.n1.get()
+        space    = self.n2.get()
         xaxis    = self.n3.get()
         duration = self.n4.get()  
 
@@ -427,8 +432,8 @@ class ColumnSelectionWindow(TopLevelWindow):
 
     def transfer_value_and_destroy(self):
         """Returns the textbox value."""
-        space    = self.n1.get()
-        _object  = self.n2.get()
+        _object  = self.n1.get()
+        space    = self.n2.get()
         xaxis    = self.n3.get()
         duration = self.n4.get()  
 
@@ -665,78 +670,134 @@ class ChartifyOptions(TopLevelWindow):
     yaxis: list | tuple
         unique vals in yaxis, to set the bar color window.
     """
-    def __init__(self, adapter, yaxis, saved_colors, title="Chartify Options", size=(400,400)):
+    def __init__(self, adapter, yaxis, saved_colors, title="Chartify Options", size=(800,600)):
         super(ChartifyOptions, self).__init__(title=title, size=size)
         self.adapter = adapter
         self.yaxis_vals = yaxis
         self.saved_colors = saved_colors
-
-        ttk.Label(self, text="Table Font:")      .grid(row=0, column=0, sticky='W', pady=(0, 50))
-        ttk.Label(self, text="Graph Background:").grid(row=1, column=0, sticky='W', pady=(0, 50))
-        ttk.Label(self, text="Table Font Size:") .grid(row=2, column=0, sticky='W', pady=(0, 50))
-
-        #ttk.Label(self, text="Chart label font size:") .grid(row=4, column=0, sticky='W')
-        #ttk.Label(self, text="Table Background:")      .grid(row=1, column=0, sticky='W')
+        # =================================== LEFT SIDE ===================================================
+        ttk.Label(self, text="Table Font:")                .grid(row=0, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Table Font Size:")           .grid(row=1, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Graph Background:")          .grid(row=2, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Diamond Marker Color:")      .grid(row=3, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Auxiliary Lines Color:")     .grid(row=4, column=0, sticky='W', pady=(0, 50))
+        ttk.Label(self, text="Actual Figure Background:")  .grid(row=5, column=0, sticky='W', pady=(0, 50))
 
         self.n1 = tk.StringVar()
         self.n2 = tk.StringVar()
         self.n3 = tk.StringVar()
         self.n4 = tk.StringVar()
         self.n5 = tk.StringVar()
+        self.n6 = tk.StringVar()
 
         self.table_font      = ttk.Combobox(self, state="readonly", textvariable=self.n1)
-        self.graph_bg        = ttk.Combobox(self, state="readonly", textvariable=self.n2)
-        self.table_fsize     = ttk.Combobox(self, state="readonly", textvariable=self.n3)
-        #self.chart_lbl_fsize = ttk.Combobox(self, state="readonly", textvariable=self.n5)
-        #self.table_bg        = ttk.Combobox(self, state="readonly", textvariable=self.n2)
+        self.table_fsize     = ttk.Combobox(self, state="readonly", textvariable=self.n2)
+        self.graph_bg        = ttk.Combobox(self, state="readonly", textvariable=self.n3)
+        self.marker_color    = ttk.Combobox(self, state="readonly", textvariable=self.n4)
+        self.aux_lines_color = ttk.Combobox(self, state="readonly", textvariable=self.n5)
+        self.actual_fig_bg   = ttk.Combobox(self, state="readonly", textvariable=self.n6)
 
-        self.table_font      .grid(row=0, column=1, sticky='E', pady=(0,50))
-        self.graph_bg        .grid(row=1, column=1, sticky='E', pady=(0,50))
-        self.table_fsize     .grid(row=2, column=1, sticky='E', pady=(0,50))
-        #self.chart_lbl_fsize .grid(row=4, column=1, sticky='E')
-        #self.table_bg        .grid(row=1, column=1, sticky='E')
+        self.table_font     .grid(row=0, column=1, sticky='E', pady=(0, 50))
+        self.table_fsize    .grid(row=1, column=1, sticky='E', pady=(0, 50))
+        self.graph_bg       .grid(row=2, column=1, sticky='E', pady=(0, 50))
+        self.marker_color   .grid(row=3, column=1, sticky='E', pady=(0, 50))
+        self.aux_lines_color.grid(row=4, column=1, sticky='E', pady=(0, 50))
+        self.actual_fig_bg  .grid(row=5, column=1, sticky='E', pady=(0, 50))
+        
+        # =================================== RIGHT SIDE ===================================================
+        ttk.Label(self, text="Chart Title Font:")          .grid(row=0, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
+        ttk.Label(self, text="Chart Title Color:")         .grid(row=1, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
+        ttk.Label(self, text="Chart Title Font Size:")     .grid(row=2, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
+        ttk.Label(self, text="Chart Axis Label Font:")     .grid(row=3, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
+        ttk.Label(self, text="Chart Axis Label Color:")    .grid(row=4, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
+        ttk.Label(self, text="Chart Axis Label Font Size:").grid(row=5, column=2, sticky='W', padx=(50, 0), pady=(0, 50))
 
-        self.graph_bg['values'] = [
+        self.n7 = tk.StringVar()
+        self.n8 = tk.StringVar()
+        self.n9 = tk.StringVar()
+        self.n10 = tk.StringVar()
+        self.n11 = tk.StringVar()
+        self.n12 = tk.StringVar()
+
+        self.chart_title_font     = ttk.Combobox(self, state="readonly", textvariable=self.n7)
+        self.chart_title_color    = ttk.Combobox(self, state="readonly", textvariable=self.n8)
+        self.chart_title_fsize    = ttk.Combobox(self, state="readonly", textvariable=self.n9)
+        self.chart_axis_lbl_font  = ttk.Combobox(self, state="readonly", textvariable=self.n10)
+        self.chart_axis_lbl_color = ttk.Combobox(self, state="readonly", textvariable=self.n11)
+        self.chart_axis_lbl_fsize = ttk.Combobox(self, state="readonly", textvariable=self.n12)
+
+        self.chart_title_font    .grid(row=0, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        self.chart_title_color   .grid(row=1, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        self.chart_title_fsize   .grid(row=2, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        self.chart_axis_lbl_font .grid(row=3, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        self.chart_axis_lbl_color.grid(row=4, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        self.chart_axis_lbl_fsize.grid(row=5, column=3, sticky='E', padx=(50, 0), pady=(0, 50))
+        #=======================================================================================================
+
+        self.colors = [
             'red',    'black',  'white', 
             'green',  'grey',   'blue', 
-            'voilet', 'yellow', 'purple', 
+            'violet', 'yellow', 'purple', 
             'pink',   'peru',   'orange'
-            ]
+            ] + list(saved_colors.keys())
 
-        self.table_fsize['values'] = list(i for i in range(10, 30))
-        #self.chart_lbl_fsize['values'] = list(i for i in range(10, 20))
+        self.graph_bg['values'] = self.marker_color['values'] = self.aux_lines_color['values'] = self.colors
+        self.chart_axis_lbl_color['values'] = self.chart_title_color['values']  = self.actual_fig_bg['values'] = self.colors
 
-        apply_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
+        self.table_fsize['values'] = self.chart_axis_lbl_fsize['values'] = self.chart_title_fsize['values'] = list(i for i in range(10, 30))
+
+        apply_btn          = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
         set_bar_colors_btn = ttk.Button(self, text="Set Bar Colors", command=self.open_bar_colors_window)
-        close_btn = ttk.Button(self, text="Close", command=self.destroy_window)
-        apply_btn.grid(row=5, column=0, padx=(0, 50), pady=(100,0))
-        set_bar_colors_btn.grid(row=5, column=1, pady=(100,0))
-        close_btn.grid(row=5, column=2, padx=(50, 0), pady=(100,0))
-        
+        close_btn          = ttk.Button(self, text="Close", command=self.destroy_window)
+
+        apply_btn         .grid(row=6, column=0, padx=(100, 50), pady=(100,0))
+        set_bar_colors_btn.grid(row=6, column=1, pady=(100,0))
+        close_btn         .grid(row=6, column=2, padx=(50, 0), pady=(100,0))
+        self.protocol("WM_DELETE_WINDOW", self.destroy_window)
 
     def add_fonts(self, fonts: list):
         self.table_font['values'] = fonts
+        self.chart_axis_lbl_font['values'] = fonts
+        self.chart_title_font['values'] = fonts
 
 
     def open_bar_colors_window(self):
-        bar_settings_window = BarColorSettings(self.adapter, self.yaxis_vals, self.saved_colors)
+        bar_settings_window = BarColorSettings(self.adapter, self.yaxis_vals, self.colors)
         bar_settings_window.start()
         
 
     def transfer_value_and_destroy(self):
         """Inserts the textbox value into the adapter."""
-        self.adapter.insert("table-font",            self.table_font.get())
-        #self.adapter.insert("table-background" ,     self.table_bg.get())
-        self.adapter.insert("graph-background" ,     self.graph_bg.get())
-        self.adapter.insert("table-font-size"  ,     self.table_fsize.get())
-        #self.adapter.insert("chart-label-font-size", self.chart_lbl_fsize.get())
+        self.adapter.insert("table-font",               self.table_font.get())
+        self.adapter.insert("graph-background",         self.graph_bg.get())
+        self.adapter.insert("table-font-size" ,         self.table_fsize.get())
+        self.adapter.insert("marker-color",             self.marker_color.get())
+        self.adapter.insert("aux-line-color",           self.aux_lines_color.get())
+        self.adapter.insert("chart-title-font",         self.chart_title_font.get())
+        self.adapter.insert("chart-title-color",        self.chart_title_color.get())
+        self.adapter.insert("chart-title-font-size",    self.chart_title_fsize.get())
+        self.adapter.insert("chart-axis-lbl-font",      self.chart_axis_lbl_font.get())
+        self.adapter.insert("chart-axis-lbl-color",     self.chart_axis_lbl_color.get())
+        self.adapter.insert("chart-axis-lbl-font-size", self.chart_axis_lbl_fsize.get())
+        self.adapter.insert("actual-figure-background", self.actual_fig_bg.get())
+        
         self.exit_window()
 
 
     def destroy_window(self) -> None:        
-        self.adapter.insert("table-font",       None)
-        self.adapter.insert("graph-background", None)
-        self.adapter.insert("table-font-size",  None)
+        self.adapter.insert("table-font",               None)
+        self.adapter.insert("graph-background",         None)
+        self.adapter.insert("table-font-size",          None)
+        self.adapter.insert("marker-color",             None)
+        self.adapter.insert("aux-line-color",           None)
+        self.adapter.insert("chart-title-font",         None)
+        self.adapter.insert("chart-title-color",        None)
+        self.adapter.insert("chart-title-font-size",    None)
+        self.adapter.insert("chart-axis-lbl-font",      None)
+        self.adapter.insert("chart-axis-lbl-color",     None)
+        self.adapter.insert("chart-axis-lbl-font-size", None)
+        self.adapter.insert("actual-figure-background", None)
+
         self.exit_window()
 
 
@@ -763,11 +824,10 @@ class BarColorSettings(TopLevelWindow):
     yaxis: list | tuple
         unique vals in yaxis, to set the bar color window.
     """
-    def __init__(self, adapter, yaxis, saved_colors: dict, title="Bar Color Settings", size=(400,400)):
+    def __init__(self, adapter, yaxis, colors, title="Bar Color Settings", size=(400,400)):
         super(BarColorSettings, self).__init__(title=title, size=size)
         self.adapter = adapter
         self.yaxis_vals: list = yaxis
-        self.saved_colors = saved_colors
         self.n_options: int = len(self.yaxis_vals) # total values in yaxis
         self.option_ptrs: list = []
 
@@ -778,14 +838,6 @@ class BarColorSettings(TopLevelWindow):
         # vscroll.grid(row=0, column=2, sticky=E, padx=(100, 0))
 
         current_row = 0
-        colors: list = [
-            'red',    'black',  'white', 
-            'green',  'grey',   'blue', 
-            'violet', 'yellow', 'purple', 
-            'pink',   'peru',   'orange'
-        ]
-
-        colors += list(self.saved_colors.keys())
 
         for i in range(0, self.n_options):
             ttk.Label(bars_frame, text=self.yaxis_vals[i]).grid(row=current_row, column=0, pady=(20,0))

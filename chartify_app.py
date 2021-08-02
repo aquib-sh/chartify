@@ -1,5 +1,7 @@
 import os
 import sys
+from tkinter import font
+from matplotlib import colors
 from numpy.core.fromnumeric import size
 from numpy.lib.function_base import insert
 sys.path.append('../')
@@ -40,23 +42,36 @@ class ChartifyAppExtended(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title(config.title)
-        self.base_file = None
-        self.axes = None
-        self.fig  = None
-        self.fig_bg = None
-        self.df = None
-        self.sheet_font  = None
-        self.sheet_fsize = None
-        self.yaxis_min = None
-        self.zaxis_min = None
-        self.xaxis_min = None
-        self.yaxis_max = None
-        self.zaxis_max = None
-        self.xaxis_max = None
+        self.base_file            = None
+        self.axes                 = None
+        self.temp                 = None
+        self.fig                  = None
+        self.fig_bg               = None
+        self.actual_fig_bg        = None
+        self.df                   = None
+        self.sheet_font           = None
+        self.sheet_fsize          = None
+        self.chart_title_font     = None
+        self.chart_title_color    = None
+        self.chart_title_fsize    = None
+        self.chart_axis_lbl_font  = None
+        self.chart_axis_lbl_color = None
+        self.chart_axis_lbl_fsize = None
+        self.yaxis_min            = None
+        self.zaxis_min            = None
+        self.xaxis_min            = None
+        self.yaxis_max            = None
+        self.zaxis_max            = None
+        self.xaxis_max            = None
+        self.state("zoomed")
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
+        self.graph_coords = {'x':[], 'y':[], 'z':[]}
         self.saver = CacheSaver()
         self.color_cache = CacheProcessor("colors.db", "colors")
         self.retriever = CacheRetriever()
+
+        self.iconbitmap("icon.ico")
+        self.resizable(width=False, height=False)
 
         if self.retriever.cache_exists():
             self.cache = self.retriever.retrieve_cache()
@@ -69,20 +84,83 @@ class ChartifyAppExtended(tk.Tk):
             if self.cache['sheet_fsize'] != None: 
                 self.sheet_fsize = self.cache['sheet_fsize']
 
+            if "marker_color" in self.cache:
+                self.marker_color = self.cache['marker_color']
+            else:
+                self.marker_color = "orange"
+
+            if "aux_line_color" in self.cache:
+                self.aux_line_color = self.cache['aux_line_color']
+            else:
+                self.aux_line_color = "grey"
+
+            if "axis_label_color" in self.cache:
+                self.axis_label_color = self.cache['axis_label_color']
+            else:
+                self.axis_label_color = "black"
+
+            if "axis_label_fsize" in self.cache:
+                self.axis_label_fsize = float(self.cache['axis_label_fsize'])
+            else:
+                self.axis_label_fsize = 12
+
+            if "chart_title_color" in self.cache:
+                self.chart_title_color = self.cache['chart_title_color']
+            else:
+                self.chart_title_color = "black"
+
+            if "chart_title_fsize" in self.cache:
+                self.chart_title_fsize = float(self.cache['chart_title_fsize'])
+            else:
+                self.chart_title_fsize = 12
+
+            if "chart_title_font" in self.cache:
+                self.chart_title_font = self.cache['chart_title_font']
+
+            if "chart_title_color" in self.cache:
+                self.chart_title_color = self.cache['chart_title_color']
+            else:
+                self.chart_title_color = "black"
+
+            if "chart_title_fsize" in self.cache:
+                self.chart_title_fsize = float(self.cache['chart_title_fsize'])
+            else:
+                self.chart_title_fsize = 12
+
+            if "chart_axis_lbl_font" in self.cache:
+                self.chart_axis_lbl_font = self.cache['chart_axis_lbl_font']
+
+            if "chart_axis_lbl_color" in self.cache:
+                self.chart_axis_lbl_color = self.cache['chart_axis_lbl_color']
+            else:
+                self.chart_axis_lbl_color = "black"
+
+            if "chart_axis_lbl_fsize" in self.cache:
+                self.chart_axis_lbl_fsize = float(self.cache['chart_axis_lbl_fsize'])
+            else:
+                self.chart_axis_lbl_fsize = 12
+
+            if "actual_fig_bg" in self.cache:
+                self.actual_fig_bg = self.cache['actual_fig_bg']
+            else:
+                self.actual_fig_bg = "white"
+
+
         self.adapter = DataAdapter()
         self.X = self.Y = self.Z = None
         self.choice_is_null = True
-        self.geometry('1000x600+50+50')
+        #self.geometry('1000x600+50+50')
+        self.geometry("{0}x{1}+0+0".format(self.winfo_screenwidth(), self.winfo_screenheight()))
         self.pack_propagate(0)
 
         self.menubar = MenuBarExtended(self)
-        self.sheet_frame = WindowFrame(self, width=config.sheetf_width, height=config.sheetf_height)
+        self.sheet_frame = WindowFrame(self)
 
         self.config(menu=self.menubar)
 
-        self.sheet = tksheet.Sheet(self.sheet_frame)
-        self.sheet_frame.place(width=config.sheetf_width, 
-            height=config.sheetf_height,
+        self.sheet = tksheet.Sheet(self.sheet_frame, width=self.winfo_screenwidth(), height=self.winfo_screenheight()-50)
+        self.sheet_frame.place(width=self.winfo_width(), 
+            height=self.winfo_height()-50,
             x=config.sheetf_coords[0], 
             y=config.sheetf_coords[1])
 
@@ -97,7 +175,7 @@ class ChartifyAppExtended(tk.Tk):
         self.zaxis_column = 'Sala'
         self.yaxis_column = 'Profesor'
         self.xaxis_column='Czas rozpoczęcia'
-        self.end_column='Czas zakończenia'
+        #self.end_column='Czas zakończenia'
         self.duration_column='Czas trwania (min)'
 
         self.colors =['blue','red','green','yellow','orange','violet','peru','pink']
@@ -111,7 +189,11 @@ class ChartifyAppExtended(tk.Tk):
         """Opens up file chooser to select the file
            calls load_file() to import data into spreadsheet.
         """
-        file_name = filedialog.askopenfilename(initialdir="/",
+        start_dir = "/"
+        self.cache = self.retriever.retrieve_cache()
+        if "recently_opened" in self.cache: start_dir = self.cache["recently_opened"]
+
+        file_name = filedialog.askopenfilename(initialdir=start_dir,
                                         title="Open a file",
                                         filetype=( ("csv files", "*.csv"), ("xlsx files", "*.xlsx"),("all files", "*.*")))
         if file_name == '':
@@ -119,11 +201,21 @@ class ChartifyAppExtended(tk.Tk):
     
         current_file_name = file_name
         self.load_file(current_file_name)
+        self.cache['recently_opened'] = os.path.dirname(current_file_name)
+        self.saver.save_cache(self.cache)
         self.choice_is_null = True
+
+
+    def __straighten_list(self, elems: list) -> list:
+        out = []
+        for elem in elems:
+            out += list(elem)
+        return out
 
 
     def load_file(self, filename):
         """Loads the file into application by placing it into spreadsheet."""
+
         if not filename.lower().endswith(".csv"):
             self.df = pandas.read_excel(filename, engine='openpyxl')
         else:
@@ -194,10 +286,15 @@ class ChartifyAppExtended(tk.Tk):
     def plotCubeAt(self, pos=(0,0,0),size=(1,1,1),color='b', ax=None):
         if ax !=None:
             x, y, z = self.cuboid_data(pos,size )
+            self.temp = x
+            self.graph_coords['x'] += self.__straighten_list(list(x)) # Add the x-coords into the tracker
+            self.graph_coords['y'] += self.__straighten_list(list(y)) # Add the y-coords into the tracker
+            self.graph_coords['z'] += self.__straighten_list(list(z)) # Add the z-coords into the tracker
             ax.plot_surface(x,y,z, color=color)
 
 
     def plot_chart(self, tool="draw", fig_present=False):
+        self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} # Empty the coordinates tracker before plotting a new chart
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
@@ -208,7 +305,7 @@ class ChartifyAppExtended(tk.Tk):
 
         try:
             if not fig_present:
-                fig = plt.figure(figsize=(6,6))
+                fig = plt.figure(figsize=(16,9))
                 self.fig = fig
 
                 self.fig.canvas.manager.set_window_title(self.base_file)
@@ -217,9 +314,28 @@ class ChartifyAppExtended(tk.Tk):
 
             ax = self.axes
 
-            ax.set_xlabel(self.xaxis_column, fontweight ='bold',labelpad=30)
-            ax.set_ylabel(self.yaxis_column, fontweight ='bold')
-            ax.set_zlabel(self.zaxis_column, fontweight ='bold')
+            ax.set_xlabel(self.xaxis_column, fontweight ='bold', labelpad=30, font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
+            ax.set_ylabel(self.yaxis_column, fontweight ='bold', font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
+            ax.set_zlabel(self.zaxis_column, fontweight ='bold', font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
+
+            stored_colors = self.color_cache.retrieve_cache()
+            if self.chart_axis_lbl_color in stored_colors:
+                self.chart_axis_lbl_color = stored_colors[self.chart_axis_lbl_color] 
+                    
+            if self.chart_title_color in stored_colors:
+                self.chart_title_color = stored_colors[self.chart_title_color]
+            
+            if self.fig_bg in stored_colors:
+                self.fig_bg = stored_colors[self.fig_bg]
+
+            if self.actual_fig_bg in stored_colors:
+                self.actual_fig_bg = stored_colors[self.actual_fig_bg]
+
+            ax.xaxis.label.set_color(self.chart_axis_lbl_color)
+            ax.yaxis.label.set_color(self.chart_axis_lbl_color)
+            ax.zaxis.label.set_color(self.chart_axis_lbl_color)
+
+            ax.set_facecolor(self.actual_fig_bg)
 
             dtype_xaxis = str(df[self.xaxis_column].dtype)
 
@@ -275,6 +391,7 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_ylim(0,len(profesors))
                 self.Y = np.arange(0,len(profesors),1)
                 ax.set_yticks(self.Y)
+            
                 ax.set_yticklabels(profesors, fontsize=10)
 
                 rooms = df[self.zaxis_column].unique()
@@ -288,7 +405,6 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zticklabels(rooms, fontsize=10)
 
                 self.axes = ax
-
 
                 try:
                     for index, row in df.iterrows():
@@ -336,12 +452,17 @@ class ChartifyAppExtended(tk.Tk):
 
                         self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
-                    plt.title("Schedule")
+                    plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
+
+                    plt.setp(plot_title, color=self.chart_title_color)
+                
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
 
                     if tool == "draw":
                         plt.show()
+                        
                     elif tool == "cut":
+                        self.graph_coords['xplane'] = []
                         tmap = TimelineMapper(start_times, self.X)
                         dates = tmap.get_all_dates()
                         
@@ -354,6 +475,13 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
+
+                        # Drawing Auxillary lines and markings on intersections
+                        intersections = self.detect_intersection(modx[0][0])
+                        if len(intersections) == 0:
+                            print("[+] No intersections found")
+                        else:
+                            self.plot_intersections(intersections)
 
                         if fig_present : plt.draw()
                         else : plt.show()
@@ -380,10 +508,11 @@ class ChartifyAppExtended(tk.Tk):
                     self.X.append(i)
 
                 self.X = np.array(self.X)
-            
+
                 ax.set_xticks(self.X)
                 ax.set_xticklabels(self.X, rotation='vertical', fontsize=9)
                 ax.set_xlim(0, int(max))
+            
 
                 #lista osób prowadzacych zajęcia
                 profesors = df[self.yaxis_column].unique()
@@ -393,6 +522,7 @@ class ChartifyAppExtended(tk.Tk):
 
                 ax.set_ylim(0,len(profesors))
                 self.Y = np.arange(0,len(profesors),1)
+                #print(f"Y Axis labels : {profesors}")
                 ax.set_yticks(self.Y)
                 ax.set_yticklabels(profesors, fontsize=10)
 
@@ -405,6 +535,7 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zlim(0,len(rooms))
                 self.Z = np.arange(0,len(rooms),1)
                 ax.set_zticks(self.Z)
+                #print(f"Z Axis labels : {rooms}")
                 ax.set_zticklabels(rooms, fontsize=10)
 
                 self.axes = ax               
@@ -459,14 +590,17 @@ class ChartifyAppExtended(tk.Tk):
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
 
                         self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=obj_color, ax=ax)
-                        
-                    plt.title("Schedule")
+
+                    plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
+                    plt.setp(plot_title, color=self.chart_title_color)
+
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
 
                     if tool == "draw":
                         plt.show()
 
                     elif tool == "cut":
+                        self.graph_coords['xplane'] = []
                         settings = CutChartNumericalSettings(self.adapter)
                         settings.start()
                         xpoint = float(self.adapter.get('cut-chart-setting-point'))
@@ -475,6 +609,13 @@ class ChartifyAppExtended(tk.Tk):
                         modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
             
+                        # Drawing Auxillary lines and markings on intersections
+                        intersections = self.detect_intersection(modx[0][0])
+                        if len(intersections) == 0:
+                            print("[+] No intersections found")
+                        else:
+                            self.plot_intersections(intersections)
+
                         if fig_present : plt.draw()
                         else : plt.show()
             
@@ -490,6 +631,55 @@ class ChartifyAppExtended(tk.Tk):
         self.yaxis_max = None
         self.zaxis_max = None
         self.xaxis_max = None
+
+
+    def plot_intersections(self, intersections):
+        # Get color from database.
+
+        stored_colors = self.color_cache.retrieve_cache()
+        if self.marker_color in stored_colors   : self.marker_color   = stored_colors[self.marker_color]
+        if self.aux_line_color in stored_colors : self.aux_line_color = stored_colors[self.aux_line_color]
+
+        for coords in intersections:
+            self.axes.scatter3D(coords[0], coords[1], coords[2],
+                marker='D', 
+                alpha=1, 
+                color=self.marker_color, 
+                s=50)
+
+            # ============== lines from y axis ===============
+            y = [coords[1]]
+            inc = 1
+            
+            while y[-1] < max(self.Y):
+                y.append(coords[1]+inc)
+                inc += 1
+            
+            x = [coords[0]]*len(y)
+            z = [coords[2]]*len(y)
+
+            self.axes.plot3D(x, y, z, self.aux_line_color, linestyle="--")
+
+            # ============= lines from z axis ==================
+            z1 = [coords[2]]
+
+            #print("minimum", min(self.Z))
+
+            inc1 = 1
+            while z1[-1] > min(self.Z):
+                point = coords[2]-inc1
+                #print(z1[-1])
+                #print(z1[-1] > min(self.Z))
+                z1.append(point)
+                inc1 += 1
+
+            x1 = [coords[0]]*len(z1)
+            y1 = [coords[1]]*len(z1)
+            
+            self.axes.plot3D(x1, y1, z1, self.aux_line_color, linestyle="--")
+
+            x=y=z=x1=y1=z1=[]
+            #print("==="*10)
 
 
     def open_column_selection(self):
@@ -529,9 +719,18 @@ class ChartifyAppExtended(tk.Tk):
 
         print(self.adapter)
 
-        tbl_font  = self.adapter.get("table-font")
-        tbl_fsize = self.adapter.get("table-font-size")
-        graph_bg  = self.adapter.get("graph-background")
+        tbl_font             = self.adapter.get("table-font")
+        tbl_fsize            = self.adapter.get("table-font-size")
+        graph_bg             = self.adapter.get("graph-background")
+        marker_color         = self.adapter.get("marker-color")
+        aux_line_color       = self.adapter.get("aux-line-color")
+        chart_title_font     = self.adapter.get("chart-title-font")
+        chart_title_color    = self.adapter.get("chart-title-color")
+        chart_title_fsize    = self.adapter.get("chart-title-font-size")
+        chart_axis_lbl_font  = self.adapter.get("chart-axis-lbl-font")
+        chart_axis_lbl_color = self.adapter.get("chart-axis-lbl-color")
+        chart_axis_lbl_fsize = self.adapter.get("chart-axis-lbl-font-size")
+        actual_fig_bg        = self.adapter.get("actual-figure-background")
 
         if tbl_font  != None and tbl_font != '': 
             self.sheet_font = tbl_font
@@ -546,6 +745,42 @@ class ChartifyAppExtended(tk.Tk):
         if graph_bg  != None and graph_bg  != '':
             self.fig_bg = graph_bg
             self.cache['fig_bg'] = self.fig_bg
+
+        if marker_color != None and marker_color != '':
+            self.marker_color = marker_color
+            self.cache['marker_color'] = self.marker_color
+        
+        if aux_line_color != None and aux_line_color != '':
+            self.aux_line_color = aux_line_color
+            self.cache['aux_line_color'] = self.aux_line_color
+
+        if chart_title_font != None and chart_title_font != '':
+            self.chart_title_font = chart_title_font
+            self.cache['chart_title_font'] = self.chart_title_font
+        
+        if chart_title_color != None and chart_title_color != '':
+            self.chart_title_color = chart_title_color
+            self.cache['chart_title_color'] = self.chart_title_color
+        
+        if chart_title_fsize != None and chart_title_fsize != '':
+            self.chart_title_fsize = float(chart_title_fsize)
+            self.cache['chart_title_fsize'] = self.chart_title_fsize
+        
+        if chart_axis_lbl_font != None and chart_axis_lbl_font != '':
+            self.chart_axis_lbl_font = chart_axis_lbl_font
+            self.cache['chart_axis_lbl_font'] = self.chart_axis_lbl_font
+        
+        if chart_axis_lbl_color != None and chart_axis_lbl_color != '':
+            self.chart_axis_lbl_color = chart_axis_lbl_color
+            self.cache['chart_axis_lbl_color'] = self.chart_axis_lbl_color
+        
+        if chart_axis_lbl_fsize != None and chart_axis_lbl_fsize != '':
+            self.chart_axis_lbl_fsize = float(chart_axis_lbl_fsize)
+            self.cache['chart_axis_lbl_fsize'] = self.chart_axis_lbl_fsize
+
+        if actual_fig_bg != None and actual_fig_bg != '':
+            self.actual_fig_bg = actual_fig_bg
+            self.cache['actual_fig_bg'] = self.actual_fig_bg
 
         self.saver.save_cache(self.cache)
 
@@ -562,7 +797,7 @@ class ChartifyAppExtended(tk.Tk):
             blue = self.adapter.get("blue")
             alpha = self.adapter.get("alpha")
             self.color_cache.insert_cache(colorname, (red, green, blue, alpha))
-            print(self.color_cache.retrieve_cache())
+            #print(self.color_cache.retrieve_cache())
 
     def refresh(self):
         self.plot_chart(fig_present=True)
@@ -614,13 +849,37 @@ class ChartifyAppExtended(tk.Tk):
         
 
     def detect_collision(self):
+        if self.choice_is_null : self.open_column_selection()
+        
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns=sheet_headers) 
-        self.open_column_selection(list(df.columns))
+
+
+        if self.xaxis_dtype != "Number":
+            end_time = []
+            df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
+            for i in range(0, len(df)):
+                row = df.iloc[i]
+                start = row[self.xaxis_column]
+                duration = row[self.duration_column]
+                end = start + datetime.timedelta(minutes=int(duration))
+                end_time.append(end)
+            df["end"] = end_time
+
+        elif self.xaxis_dtype == "Number":
+            end_nums = []
+            df[self.xaxis_column] = pandas.to_numeric(df[self.xaxis_column])
+            for i in range(0, len(df)):
+                row = df.iloc[i]
+                start = row[self.xaxis_column]
+                duration = row[self.duration_column]
+                end = start + (duration*1000)
+                end_nums.append(end)
+            df["end"] = end_nums
 
         detector = CollisionDetector(time_start=df[self.xaxis_column],
-                                     time_end=df[self.end_column],
+                                     time_end=df["end"],
                                      coll_space=df[self.zaxis_column],
                                      coll_obj=df[self.yaxis_column])
         report = detector.detect()
@@ -628,6 +887,23 @@ class ChartifyAppExtended(tk.Tk):
 
         self.report_window = CollisionReport(report, title="Collision Detector Report", size=(750,500))
         self.report_window.start()
+
+
+    def detect_intersection(self, xpoint_of_plane: float) -> list:
+        """Checks if the cutting plane intersects with any point in cuboid.
+            if it intersects then return (x,y,z) co-ordinates.
+
+            Parameters
+            ----------
+            xpoint_of_plane: float
+                x co-ordinate of the cutting plane.
+        """
+        intersections: list[tuple] = [] # list of intersecting x,y,z co-ordinates.
+        for i in range(0, len(self.graph_coords['x'])):
+            if round(self.graph_coords['x'][i],2) == xpoint_of_plane:
+                coords = (self.graph_coords['x'][i], self.graph_coords['y'][i], self.graph_coords['z'][i])
+                intersections.append(coords)
+        return intersections
 
 
     def draw3d_chart(self):
@@ -644,5 +920,4 @@ class ChartifyAppExtended(tk.Tk):
 
 if __name__ == "__main__":
     obj = ChartifyAppExtended()
-    obj.load_file(r"C:\Users\Aquib\Projects\fiverr-projects\augustino\chartify\requirements\3DCHARTS_ENG_DOCS\time_and_distnace14V.csv")
     obj.start()
