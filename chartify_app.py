@@ -294,6 +294,7 @@ class ChartifyAppExtended(tk.Tk):
             self.graph_coords['y'] += self.__straighten_list(list(y)) # Add the y-coords into the tracker
             self.graph_coords['z'] += self.__straighten_list(list(z)) # Add the z-coords into the tracker
             ax.plot_surface(x,y,z, color=color)
+            print("plotting X at:", x)
 
 
     def convert_timeunit(self, d: datetime.datetime) -> int:
@@ -448,7 +449,18 @@ class ChartifyAppExtended(tk.Tk):
                     min = minvals[self.xaxis_column] #najwczesniejsza data wśród dat rozpoczęcia
                 
                 if self.xaxis_max != None:
-                    max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+                    if self.duration_dtype == 'Week':
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(weeks=int(maxvals[self.duration_column]))
+                    elif self.duration_dtype == 'Day':
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(days=int(maxvals[self.duration_column]))
+                    elif self.duration_dtype == 'Hour':
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(hours=int(maxvals[self.duration_column]))
+                    elif self.duration_dtype == 'Minute':
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+                    elif self.duration_dtype == 'Second':
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(seconds=int(maxvals[self.duration_column]))
+                    else:
+                        max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
 
                 else:
                     max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
@@ -476,30 +488,10 @@ class ChartifyAppExtended(tk.Tk):
                 else:
                     time_label_format = "{dd}/{mm}/{yyyy} {hh}:{_mm}:{ss}"
 
-                #start_times = []
-
                 start_times = self.generate_timeseries_xaxis(end=dminutes, step=odstep_min, label_format=time_label_format, min=min)
 
-                # for m in range(0,dminutes,odstep_min):
-                #     year = min.year
-                #     hour = int(min.hour + m/60 ) % 24
-                #     minute = min.minute
-                #     sec = min.second
-                #     ddd = min.hour*60 + min.minute + m
-                #     day = int(min.day + ddd/60/24 )
-                #     month = min.month
-                    
-                #     label = time_label_format.format(yyyy=year, mm=month, dd=day,
-                #         hh=hour, _mm=minute, ss=sec
-                #         )
-                #     start_times.append(label)
-
-                # print("type of d is ", type(d))
-                # for i in dir(d) : print(i)
-                # print("type of min is ", type(min))
-                # for i in dir(min) : print(i)
-
                 self.X = np.arange(0,dminutes,odstep_min)
+                print("X axis coords are", self.X)
                 ax.set_xticks(self.X)
                 ax.set_xticklabels(start_times, rotation='vertical', fontsize=9)
 
@@ -554,7 +546,7 @@ class ChartifyAppExtended(tk.Tk):
                             ) : continue
 
                         d = start - min
-                        #startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+                        startunits = self.convert_timeunit(d)
 
                         y = np.where(np.array(profesors) == prof)[0][0]
                         z = np.where(np.array(rooms) == room)[0][0]
@@ -571,7 +563,7 @@ class ChartifyAppExtended(tk.Tk):
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
 
-                        self.plotCubeAt(pos=(dminutes+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
+                        self.plotCubeAt(pos=(startunits+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
 
