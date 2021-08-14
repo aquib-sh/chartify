@@ -294,7 +294,7 @@ class ChartifyAppExtended(tk.Tk):
             self.graph_coords['y'] += self.__straighten_list(list(y)) # Add the y-coords into the tracker
             self.graph_coords['z'] += self.__straighten_list(list(z)) # Add the z-coords into the tracker
             ax.plot_surface(x,y,z, color=color)
-            print("plotting X at:", x)
+            #print("plotting X at:", x)
 
 
     def convert_timeunit(self, d: datetime.datetime) -> int:
@@ -359,11 +359,13 @@ class ChartifyAppExtended(tk.Tk):
                 second = min.second
 
             elif self.duration_dtype == "Minute":
+                #print("Entered minutes section")
                 year   = min.year    + i//60//24//365
                 month  = min.month   + i//60//24//30
                 day    = (min.day    + i//60//24) % 30
                 hour   = (min.hour   + i//60) % 24
                 minute = (min.minute + i) % 60
+                print(f"BASE {min.minute}\tADD {i}\tYIELD {minute}")
                 second = min.second
         
             elif self.duration_dtype == "Second":
@@ -385,6 +387,7 @@ class ChartifyAppExtended(tk.Tk):
 
             label = label_format.format(yyyy=year, mm=month, dd=day,
                 hh=hour, _mm=minute, ss=second)
+            print("LBL", label)
             data.append(label)
 
         return data
@@ -474,13 +477,21 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_xlim(0,dminutes)
 
                 odstep_min = 1
-                if dminutes > 120:
+                
+                if dminutes <= 50:
+                    pass
+                elif dminutes <= 100:
+                    odstep_min = 10
+                elif dminutes <= 500:
+                    odstep_min = 30
+                elif dminutes <= 1000:
                     odstep_min = 60
-                if dminutes > 2000:
+                elif dminutes <= 2000:
                     odstep_min = 120
-                if dminutes > 3000:
+                elif dminutes >= 3000:
                     odstep_min = 240
 
+                print(f"Dmins is {dminutes}, odstep is {odstep_min}")
                 time_label_format = None
 
                 if self.xaxis_dtype == "Time(yyyy-mm-dd hh:mm:ss)":
@@ -491,8 +502,9 @@ class ChartifyAppExtended(tk.Tk):
                 start_times = self.generate_timeseries_xaxis(end=dminutes, step=odstep_min, label_format=time_label_format, min=min)
 
                 self.X = np.arange(0,dminutes,odstep_min)
-                print("X axis coords are", self.X)
+                #print("X axis coords are", self.X)
                 ax.set_xticks(self.X)
+                #print("LABELS SET ARE X", start_times)
                 ax.set_xticklabels(start_times, rotation='vertical', fontsize=9)
 
                 #lista osób prowadzacych zajęcia
