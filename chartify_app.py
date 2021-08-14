@@ -47,16 +47,18 @@ class ChartifyAppExtended(tk.Tk):
         self.temp                 = None
         self.fig                  = None
         self.fig_bg               = None
-        self.actual_fig_bg        = None
+        self.actual_fig_bg        = "white"
         self.df                   = None
         self.sheet_font           = None
         self.sheet_fsize          = None
         self.chart_title_font     = None
-        self.chart_title_color    = None
-        self.chart_title_fsize    = None
+        self.chart_title_color    = "black"
+        self.chart_title_fsize    = 20
         self.chart_axis_lbl_font  = None
-        self.chart_axis_lbl_color = None
-        self.chart_axis_lbl_fsize = None
+        self.chart_axis_lbl_color = "black"
+        self.chart_axis_lbl_fsize = 15
+        self.marker_color         = "yellow"
+        self.aux_line_color       = "blue"
         self.yaxis_min            = None
         self.zaxis_min            = None
         self.xaxis_min            = None
@@ -190,8 +192,9 @@ class ChartifyAppExtended(tk.Tk):
            calls load_file() to import data into spreadsheet.
         """
         start_dir = "/"
-        self.cache = self.retriever.retrieve_cache()
-        if "recently_opened" in self.cache: start_dir = self.cache["recently_opened"]
+        if self.retriever.cache_exists():
+            self.cache = self.retriever.retrieve_cache()
+            if "recently_opened" in self.cache: start_dir = self.cache["recently_opened"]
 
         file_name = filedialog.askopenfilename(initialdir=start_dir,
                                         title="Open a file",
@@ -293,6 +296,99 @@ class ChartifyAppExtended(tk.Tk):
             ax.plot_surface(x,y,z, color=color)
 
 
+    def convert_timeunit(self, d: datetime.datetime) -> int:
+        """Converts a variable with components to appropriate unit."""
+        if self.duration_dtype == "Week":
+            return (d.components.days/7)
+        elif self.duration_dtype == "Day":
+            return (d.components.days)
+        elif self.duration_dtype == "Hour":
+            return (d.components.days*24 + d.components.hours)
+        elif self.duration_dtype == "Minute":
+            return (d.components.days*24*60 + d.components.hours*60 + d.components.minutes)
+        elif self.duration_dtype == "Second":
+            return (d.components.days*24*60*60 + d.components.hours*60*60 + d.components.minutes*60 + d.components.seconds)
+
+
+    def generate_timeseries_xaxis(self, end: int, 
+        step: int, label_format: str, min: datetime.timedelta) -> list:
+        """Generate list for the time data of xaxis.
+        
+        Parameters
+        ----------
+        end: int
+            Sum total of all the data (minutes or seconds or years...)
+
+        step: int
+            Step by which to increment the range.
+
+        format: str
+            string containing '{}' and yyyy, mm, dd, hh, _mm, ss symbols to fill using formated strings.
+        """
+        data = []
+        print(self.duration_dtype)
+        weeks_in_a_year: int = 365//7
+
+        for i in range(0, end, step):
+            if self.duration_dtype == "Week":
+                year   = min.year + (i//weeks_in_a_year)
+                month  = int(min.month + (i//4)) % 12
+                day    = int(min.day + i*7) % 30
+                hour   = min.hour
+                minute = min.minute
+                second = min.second
+                #hour   = int(min.hour + i*7*24) % 24
+                #minute = int(min.minute + i*7*24*60) % 60
+                #seconds = int(min.second )
+
+            elif self.duration_dtype == "Day":
+                year   = min.year   + i//365
+                month  = (min.month + i//30)%12
+                day    = i%30
+                hour   = min.hour
+                minute = min.minute
+                second = min.second
+
+            elif self.duration_dtype == "Hour":
+                year   = min.year  + i//24//365
+                month  = min.month + i//24//30
+                day    = (min.day  + i//24) % 30
+                hour   = (min.hour + i) % 24
+                minute = min.minute
+                second = min.second
+
+            elif self.duration_dtype == "Minute":
+                year   = min.year    + i//60//24//365
+                month  = min.month   + i//60//24//30
+                day    = (min.day    + i//60//24) % 30
+                hour   = (min.hour   + i//60) % 24
+                minute = (min.minute + i) % 60
+                second = min.second
+        
+            elif self.duration_dtype == "Second":
+                year   = min.year    + i//60//60//24//365
+                month  = min.month   + i//60//60//24//30
+                day    = (min.day    + i//60//60//24) % 30
+                hour   = (min.hour   + i//60//60) % 24
+                minute = (min.minute + i/60) % 60
+                second = (min.second  + i) % 60
+
+            else:
+                year = min.year
+                hour = int(min.hour + i/60 ) % 24
+                minute = min.minute
+                second = min.second
+                ddd = min.hour*60 + min.minute + i
+                day = int(min.day + ddd/60/24)
+                month = min.month
+
+            label = label_format.format(yyyy=year, mm=month, dd=day,
+                hh=hour, _mm=minute, ss=second)
+            data.append(label)
+
+        return data
+
+
     def plot_chart(self, tool="draw", fig_present=False):
         self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} # Empty the coordinates tracker before plotting a new chart
         sheet_data    = self.sheet.get_sheet_data()
@@ -353,6 +449,7 @@ class ChartifyAppExtended(tk.Tk):
                 
                 if self.xaxis_max != None:
                     max = pandas.to_datetime(self.xaxis_max)+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
+
                 else:
                     max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
                 
@@ -360,23 +457,47 @@ class ChartifyAppExtended(tk.Tk):
                 d = max - min # okres
 
                 #ile jest minut od pocztku pierwszego do koca ostatniego wykadu
-                dminutes = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+                dminutes = self.convert_timeunit(d)
 
                 ax.set_xlim(0,dminutes)
-                start_times = []
 
-                odstep_min = 60
+                odstep_min = 1
+                if dminutes > 120:
+                    odstep_min = 60
                 if dminutes > 2000:
                     odstep_min = 120
                 if dminutes > 3000:
                     odstep_min = 240
 
-                for m in range(0,dminutes,odstep_min):
-                    hour = int(min.hour + m/60 ) % 24
-                    ddd = min.hour*60 + min.minute + m
-                    day = int(min.day + ddd/60/24 )
-                    month = min.month
-                    start_times.append(str(day)+"/"+str(month) + "  "+str(hour)+":00")
+                time_label_format = None
+
+                if self.xaxis_dtype == "Time(yyyy-mm-dd hh:mm:ss)":
+                    time_label_format = "{yyyy}-{mm}-{dd} {hh}:{_mm}:{ss}"
+                else:
+                    time_label_format = "{dd}/{mm}/{yyyy} {hh}:{_mm}:{ss}"
+
+                #start_times = []
+
+                start_times = self.generate_timeseries_xaxis(end=dminutes, step=odstep_min, label_format=time_label_format, min=min)
+
+                # for m in range(0,dminutes,odstep_min):
+                #     year = min.year
+                #     hour = int(min.hour + m/60 ) % 24
+                #     minute = min.minute
+                #     sec = min.second
+                #     ddd = min.hour*60 + min.minute + m
+                #     day = int(min.day + ddd/60/24 )
+                #     month = min.month
+                    
+                #     label = time_label_format.format(yyyy=year, mm=month, dd=day,
+                #         hh=hour, _mm=minute, ss=sec
+                #         )
+                #     start_times.append(label)
+
+                # print("type of d is ", type(d))
+                # for i in dir(d) : print(i)
+                # print("type of min is ", type(min))
+                # for i in dir(min) : print(i)
 
                 self.X = np.arange(0,dminutes,odstep_min)
                 ax.set_xticks(self.X)
@@ -433,7 +554,7 @@ class ChartifyAppExtended(tk.Tk):
                             ) : continue
 
                         d = start - min
-                        startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
+                        #startmins = d.components.days * 24*60 + d.components.hours*60 + d.components.minutes
 
                         y = np.where(np.array(profesors) == prof)[0][0]
                         z = np.where(np.array(rooms) == room)[0][0]
@@ -450,7 +571,7 @@ class ChartifyAppExtended(tk.Tk):
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
 
-                        self.plotCubeAt(pos=(startmins+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
+                        self.plotCubeAt(pos=(dminutes+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
 
