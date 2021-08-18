@@ -373,8 +373,10 @@ class ColumnSelectionWindow(TopLevelWindow):
         # Format of the data choice in dtype_y1 (choose 1 of 3)
         self.dtype_y1 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n5)
         self.dtype_y1['values'] = ('Number',
-                                   'Time(yyyy-mm-dd hh:mm:ss)',
-                                   'Time(dd/mm/yyyyy hh:mm:ss)',
+                                    'KiloMeter',
+                                    'Meter',
+                                    'Time(yyyy-mm-dd hh:mm:ss)',
+                                    'Time(dd/mm/yyyyy hh:mm:ss)',
                                    )
         self.dtype_y1.current(0)
 
@@ -383,11 +385,13 @@ class ColumnSelectionWindow(TopLevelWindow):
         # Format of the data choice in dtype_y2 (choose 1 of 4):
         self.dtype_y2 = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n6)
         self.dtype_y2['values'] = ('Number',
-                                   'Week',
-                                   'Day',
-                                   'Hour',
-                                   'Minute',
-                                   'Second',
+                                    'KiloMeter',
+                                    'Meter',
+                                    'Week',
+                                    'Day',
+                                    'Hour',
+                                    'Minute',
+                                    'Second',
                                    )
         self.dtype_y2.current(0)
 
@@ -412,15 +416,18 @@ class ColumnSelectionWindow(TopLevelWindow):
         xaxis_dtype     = self.n5.get()
         duration_dtype  = self.n6.get()
 
-        print(xaxis_dtype)
+        #print(xaxis_dtype)
+
+        numerical = ['Number', 'KiloMeter', 'Meter']
 
         range_window = RangeSelectionWindow(self.adapter, 
             dataframe=self.df, 
+            xstart = xaxis,
             title="Range Selection", 
             size=(900, 400), 
-            datetime=xaxis_dtype != 'Number')
+            datetime=xaxis_dtype not in numerical)
 
-        range_window.set_min_max(xstart=xaxis, yaxis=object, zaxis=space)
+        range_window.set_min_max(yaxis=object, zaxis=space)
         range_window.start()
 
 
@@ -468,9 +475,10 @@ class RangeSelectionWindow(TopLevelWindow):
     size : tuple
         Size of window (x:int, y:int) where x is width and y is height.
     """
-    def __init__(self, adapter, dataframe, title:str, size:tuple, datetime=False):
+    def __init__(self, adapter, dataframe, xstart, title:str, size:tuple, datetime=False):
         super(RangeSelectionWindow, self).__init__(title=title, size=size)
         self.adapter = adapter
+        self.xstart = xstart
         self.df = dataframe
         self.isdaterange = datetime
 
@@ -521,7 +529,7 @@ class RangeSelectionWindow(TopLevelWindow):
         build_btn.grid(row=4, column=0, padx=(200, 100), pady=(150,100))
 
 
-    def set_min_max(self, xstart: str, yaxis: str, zaxis: str):
+    def set_min_max(self, yaxis: str, zaxis: str):
         """Populates Minimum and Maximum dropdowns from the given column names of dataframes.
         
         Parameters
@@ -544,8 +552,8 @@ class RangeSelectionWindow(TopLevelWindow):
         self.choice2_end.current(0)
 
         if self.isdaterange:
-            self.choice3_start['values'] = self.df[xstart].sort_values().unique().tolist()
-            self.choice3_end['values']   = self.df[xstart].sort_values(ascending=False).unique().tolist()
+            self.choice3_start['values'] = self.df[self.xstart].sort_values().unique().tolist()
+            self.choice3_end['values']   = self.df[self.xstart].sort_values(ascending=False).unique().tolist()
             self.choice3_start.current(0)
             self.choice3_end.current(0)
 
@@ -559,7 +567,11 @@ class RangeSelectionWindow(TopLevelWindow):
         if self.isdaterange:
             self.adapter.insert('xaxis_min', self.n3_start.get())
         else:
-            self.adapter.insert('xaxis_min', self.choice3_start.get())
+            xmin = self.choice3_start.get()
+            if xmin == '':
+                xmin = min(self.df[self.xstart].sort_values().unique().tolist())
+
+            self.adapter.insert('xaxis_min', xmin)
 
         self.adapter.insert('yaxis_max', self.n1_end.get())
         self.adapter.insert('zaxis_max', self.n2_end.get())
@@ -567,7 +579,11 @@ class RangeSelectionWindow(TopLevelWindow):
         if self.isdaterange:
             self.adapter.insert('xaxis_max', self.n3_end.get())
         else:
-            self.adapter.insert('xaxis_max', self.choice3_end.get())
+            xmax = self.choice3_end.get()
+            if xmax == '':
+                xmax = max(self.df[self.xstart].sort_values().unique().tolist())
+            
+            self.adapter.insert('xaxis_max', xmax)
 
         self.exit_window()
 
