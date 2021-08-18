@@ -2,7 +2,7 @@ import os
 import sys
 from tkinter import font
 from matplotlib import colors
-from numpy.core.fromnumeric import size
+from numpy.core.fromnumeric import size, sort
 from numpy.lib.function_base import insert
 sys.path.append('../')
 import datetime
@@ -208,6 +208,14 @@ class ChartifyAppExtended(tk.Tk):
         self.saver.save_cache(self.cache)
         self.choice_is_null = True
 
+        self.yaxis_min = None
+        self.zaxis_min = None
+        self.xaxis_min = None
+        self.yaxis_max = None
+        self.zaxis_max = None
+        self.xaxis_max = None
+
+
 
     def __straighten_list(self, elems: list) -> list:
         out = []
@@ -327,7 +335,7 @@ class ChartifyAppExtended(tk.Tk):
             string containing '{}' and yyyy, mm, dd, hh, _mm, ss symbols to fill using formated strings.
         """
         data = []
-        print(self.duration_dtype)
+        #print(self.duration_dtype)
         weeks_in_a_year: int = 365//7
 
         for i in range(0, end, step):
@@ -365,7 +373,7 @@ class ChartifyAppExtended(tk.Tk):
                 day    = (min.day    + i//60//24) % 30
                 hour   = (min.hour   + i//60) % 24
                 minute = (min.minute + i) % 60
-                print(f"BASE {min.minute}\tADD {i}\tYIELD {minute}")
+                #print(f"BASE {min.minute}\tADD {i}\tYIELD {minute}")
                 second = min.second
         
             elif self.duration_dtype == "Second":
@@ -387,11 +395,32 @@ class ChartifyAppExtended(tk.Tk):
 
             label = label_format.format(yyyy=year, mm=month, dd=day,
                 hh=hour, _mm=minute, ss=second)
-            print("LBL", label)
+            #print("LBL", label)
             data.append(label)
 
         return data
 
+    
+    def num_convert_duration(self, duration: float) -> float:
+        """Converts the duration value to the appropriate by dtype of duration column."""
+        res = float(duration)/1000
+        if ((self.xaxis_dtype == "KiloMeter" and self.duration_dtype == "KiloMeter")
+            or
+            (self.xaxis_dtype == "Meter" and self.duration_dtype == "Meter")
+            or
+            (self.xaxis_dtype == "Number" and self.duration_dtype == "Number")):
+            res = float(duration)
+
+        elif (self.xaxis_dtype == "Meter" and self.duration_dtype == "KiloMeter"):
+            res = float(duration)*1000
+        return res
+        
+
+    def num_add_duration_to_start(self, val: float, duration: float) -> float:
+        """Adds value to duration according to the datatype of xaxis and duration columns."""
+        res = float(val) + self.num_convert_duration(duration)
+        return res
+        
 
     def plot_chart(self, tool="draw", fig_present=False):
         self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} # Empty the coordinates tracker before plotting a new chart
@@ -491,7 +520,7 @@ class ChartifyAppExtended(tk.Tk):
                 elif dminutes >= 3000:
                     odstep_min = 240
 
-                print(f"Dmins is {dminutes}, odstep is {odstep_min}")
+                #print(f"Dmins is {dminutes}, odstep is {odstep_min}")
                 time_label_format = None
 
                 if self.xaxis_dtype == "Time(yyyy-mm-dd hh:mm:ss)":
@@ -574,7 +603,8 @@ class ChartifyAppExtended(tk.Tk):
                             obj_color = self.adapter.get(prof)
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
-
+                        #print("min while plotting", self.xaxis_min)
+                        #print("max while plotting", self.xaxis_max)
                         self.plotCubeAt(pos=(startunits+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
@@ -590,6 +620,7 @@ class ChartifyAppExtended(tk.Tk):
                         self.graph_coords['xplane'] = []
                         tmap = TimelineMapper(start_times, self.X)
                         dates = tmap.get_all_dates()
+
                         
                         settings = CutChartSettings(self.adapter, dates)
                         settings.start()
@@ -614,7 +645,9 @@ class ChartifyAppExtended(tk.Tk):
                 except Exception as e:
                     messagebox.showerror("Błąd","Bład podczas tworzenia plot_chartu\r\n"+traceback.format_exc())
 
-
+            # ===================================================================================================
+            # ===================================== NUMERIC DATA TYPE ===========================================
+            # ===================================================================================================
             elif dtype_xaxis in ['float64', 'int64']:
 
                 df.sort_values(by=[self.xaxis_column],inplace=True)
@@ -625,25 +658,48 @@ class ChartifyAppExtended(tk.Tk):
                 if self.xaxis_min : min = float(self.xaxis_min)
                 else : min = 0
 
-                if self.xaxis_max : max = float(self.xaxis_max) + maxvals[self.duration_column]/1000
-                else : max = maxvals[self.xaxis_column] + maxvals[self.duration_column]/1000
+                if self.xaxis_max: 
+                    #max = self.num_add_duration_to_start(float(self.xaxis_max), maxvals[self.duration_column])
+                    max = float(self.xaxis_max)
+
+                else : max = self.num_add_duration_to_start(maxvals[self.xaxis_column], maxvals[self.duration_column])
+
+                jump = 1 # steps for xlabel
+
+                if   max >= 100 : jump = 15
+                elif max >= 50  : jump = 10
+                elif max >= 25  : jump = 5
+                elif max >= 10  : jump = 2
 
                 self.X = []
-                for i in range(int(min), int(max), 5):
-                    self.X.append(i)
+
+                if max < min:
+                    raise Exception("[!] MIN value cannot be greater than MAX")
+
+                # If number is in the fractional part of min
+                # example: min=6, max=6.2
+                temp = min
+                if (int(min) == int(max)) and (max < int(min)+1):
+                    while round(temp, 1) < round(max, 1):
+                        self.X.append(temp)
+                        temp += 0.1
+                else:
+                    for i in range(int(min), int(max)+1, jump):
+                        self.X.append(i)
 
                 self.X = np.array(self.X)
 
                 ax.set_xticks(self.X)
                 ax.set_xticklabels(self.X, rotation='vertical', fontsize=9)
                 ax.set_xlim(0, int(max))
-            
 
                 #lista osób prowadzacych zajęcia
                 profesors = df[self.yaxis_column].unique()
 
                 if self.yaxis_min != None and self.yaxis_max != None:
-                     profesors = [prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)]
+                     profesors = sort([prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)])
+
+                profesors.sort()
 
                 ax.set_ylim(0,len(profesors))
                 self.Y = np.arange(0,len(profesors),1)
@@ -664,6 +720,9 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zticklabels(rooms, fontsize=10)
 
                 self.axes = ax               
+
+                #print(f"MIN: {min}")
+                #print(f"MAX: {max}")
 
                 try:
                     for index, row in df.iterrows():
@@ -693,15 +752,18 @@ class ChartifyAppExtended(tk.Tk):
                             ) : continue
                         
                         _y = np.where(np.array(profesors) == prof)[0]
-
                         _z = np.where(np.array(rooms) == room)[0]
 
                         if len(_y) == 0 or len(_z) == 0 : continue
 
                         y = _y[0]
                         z = _z[0]
-                        plot_pos = (start+(duration/1000),y,z)
-                        
+
+                        xpos = self.num_add_duration_to_start(float(start), float(duration)/2)
+                        #xpos = float(start)
+                        #print(xpos, y, z)
+                        plot_pos = (xpos,y,z) 
+
                         # Get color from database.
                         stored_colors = self.color_cache.retrieve_cache()
 
@@ -713,8 +775,9 @@ class ChartifyAppExtended(tk.Tk):
                             obj_color = self.adapter.get(prof)
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
-
-                        self.plotCubeAt(pos=plot_pos,size=(duration/1000,0.1,0.1),color=obj_color, ax=ax)
+                        #print("min while plotting", self.xaxis_min)
+                        #print("max while plotting", self.xaxis_max)
+                        self.plotCubeAt(pos=plot_pos,size=(self.num_convert_duration(duration),0.1,0.1),color=obj_color, ax=ax)
 
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
                     plt.setp(plot_title, color=self.chart_title_color)
@@ -749,13 +812,6 @@ class ChartifyAppExtended(tk.Tk):
 
         except Exception as e:
             messagebox.showerror("Error", "Error in calculations for the graph \r \n"+traceback.format_exc())
-
-        self.yaxis_min = None
-        self.zaxis_min = None
-        self.xaxis_min = None
-        self.yaxis_max = None
-        self.zaxis_max = None
-        self.xaxis_max = None
 
 
     def plot_intersections(self, intersections):
@@ -826,6 +882,8 @@ class ChartifyAppExtended(tk.Tk):
             self.yaxis_max = self.adapter.get('yaxis_max')
             self.zaxis_max = self.adapter.get('zaxis_max')
             self.xaxis_max = self.adapter.get('xaxis_max')
+            print(f"Appended xaxis_min : {self.xaxis_min}")
+            print(f"Appended xaxis_max : {self.xaxis_max}")
             self.adapter.delete('range_window_opened')
 
         self.choice_is_null = False
@@ -842,7 +900,7 @@ class ChartifyAppExtended(tk.Tk):
         opts.add_fonts(fonts)
         opts.start()
 
-        print(self.adapter)
+        #print(self.adapter)
 
         tbl_font             = self.adapter.get("table-font")
         tbl_fsize            = self.adapter.get("table-font-size")
@@ -1024,9 +1082,10 @@ class ChartifyAppExtended(tk.Tk):
                 x co-ordinate of the cutting plane.
         """
         intersections: list[tuple] = [] # list of intersecting x,y,z co-ordinates.
+        #breakpoint()
         for i in range(0, len(self.graph_coords['x'])):
-            if round(self.graph_coords['x'][i],2) == xpoint_of_plane:
-                coords = (self.graph_coords['x'][i], self.graph_coords['y'][i], self.graph_coords['z'][i])
+            if round(self.graph_coords['x'][i]) == round(xpoint_of_plane):
+                coords = (xpoint_of_plane, self.graph_coords['y'][i], self.graph_coords['z'][i])
                 intersections.append(coords)
         return intersections
 
