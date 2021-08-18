@@ -11,7 +11,10 @@ class TimelineMapper:
     def dissect_label(self, label) -> tuple:
         """Returns date, hour, minutes info from given label."""
         date = label.split()[0]
-        hours, minutes = label.split()[1].split(":")
+        time_parts = label.split()[1].split(":")
+        hours    = time_parts[0]
+        minutes = time_parts[1]
+
         return (date, int(hours), int(minutes))
 
 
