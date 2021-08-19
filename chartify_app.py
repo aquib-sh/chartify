@@ -1038,8 +1038,8 @@ class ChartifyAppExtended(tk.Tk):
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns=sheet_headers) 
 
-
-        if self.xaxis_dtype != "Number":
+        print(self.xaxis_dtype)
+        if self.xaxis_dtype not in ["Number", "KiloMeter", "Meter"]:
             end_time = []
             df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
             for i in range(0, len(df)):
@@ -1050,14 +1050,14 @@ class ChartifyAppExtended(tk.Tk):
                 end_time.append(end)
             df["end"] = end_time
 
-        elif self.xaxis_dtype == "Number":
+        elif self.xaxis_dtype in ["Number", "KiloMeter", "Meter"]:
             end_nums = []
             df[self.xaxis_column] = pandas.to_numeric(df[self.xaxis_column])
             for i in range(0, len(df)):
                 row = df.iloc[i]
                 start = row[self.xaxis_column]
                 duration = row[self.duration_column]
-                end = start + (duration*1000)
+                end = self.num_add_duration_to_start(val=start, duration=duration)
                 end_nums.append(end)
             df["end"] = end_nums
 
@@ -1068,7 +1068,7 @@ class ChartifyAppExtended(tk.Tk):
         report = detector.detect()
         detector.reset()
 
-        self.report_window = CollisionReport(report, title="Collision Detector Report", size=(750,500))
+        self.report_window = CollisionReport(report, title="Collision Detector Report", size=(750,500), font=self.sheet_font)
         self.report_window.start()
 
 
