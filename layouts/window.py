@@ -296,14 +296,13 @@ class CollisionReport(TopLevelWindow):
     """Displays Collision Report as Text on TopLevelWindow.
 
     """
-    def __init__(self, report:str, title:str, size:tuple):
+    def __init__(self, report:str, title:str, size:tuple, font:tuple):
         super(CollisionReport, self).__init__(title=title, size=size)
 
         yscrollbar = ttk.Scrollbar(self)
         yscrollbar.pack(side=RIGHT, fill=Y)
 
-        font_tuple = ("Arial", 15)
-        self.report = Text(self, yscrollcommand=True, bg="linen", font=font_tuple)
+        self.report = Text(self, yscrollcommand=True, bg="linen", font=font)
         self.report.insert(END, report)
         self.report.config(state="disabled")
         self.report.config(yscrollcommand=yscrollbar.set)
