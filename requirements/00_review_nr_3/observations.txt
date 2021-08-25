@@ -1,0 +1,20 @@
+A. I added 1 column Duration(h)
+I've put the data.
+Then I added next column Duration (sec).
+The program added 1 column, but in the same time all data from Duration(h) were lost. Whole column became empty.
+
+So I've input one more time all data to the 2 empty columns and I saved the file by File -> Save.
+Then I selected last row, on the bottom of table, and I've added a row through Edit-> Insert, I've input all data. When I have pressed the "Apply" button - I lost one more time the data from 2 newly added columns - it becomes empty. 
+Fortunately I've opened one more time the file from the disc and the data were there.
+
+With the file 0087_time_collisions.csv the drawing based on duration in seconds doesn't work. Minutes are ok, hours - ok, except bar for last row (it starts at 16:30 and on the chart at 16:00). So - please see this 2 issues:
+- drawing for last record which has to start at 16:30. there is a problem while the duration is in hours not in minutes
+- conversion of seconds
+
+Drawing works well when the duration is in minutes, for other types of duration ( day, hours ) the max range of the chart is not shown.
+
+Collisions reports have bad info, when the duration is different than minutes. The program treat days or hours as minutes.
+Collisions report gives wrong data. For example for the file 0087_timerversed2.csv, when X is "Day Start" and duration "Day duration"  "Person C" is in collision with A & B, and this is not reported.
+Second thing - the report doesn't take into consideration collission in vertical, that means 1 specific person is in 2 or more differents rooms in the same moment of time. Only takes the collisions in horisontal, that means 2 persons are in the same room in at specific moment. 
+
+
