@@ -12,6 +12,7 @@ import pandas
 import tksheet
 import config
 import tkinter as tk
+from tkinter import N, S, E, W
 from tkinter.constants import *
 from tkinter import ttk, messagebox, filedialog
 import matplotlib.pyplot as plt
@@ -65,7 +66,6 @@ class ChartifyAppExtended(tk.Tk):
         self.yaxis_max            = None
         self.zaxis_max            = None
         self.xaxis_max            = None
-        self.state("zoomed")
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
         self.graph_coords = {'x':[], 'y':[], 'z':[]}
         self.saver = CacheSaver()
@@ -73,7 +73,6 @@ class ChartifyAppExtended(tk.Tk):
         self.retriever = CacheRetriever()
 
         self.iconbitmap("icon.ico")
-        self.resizable(width=False, height=False)
 
         if self.retriever.cache_exists():
             self.cache = self.retriever.retrieve_cache()
@@ -151,23 +150,21 @@ class ChartifyAppExtended(tk.Tk):
         self.adapter = DataAdapter()
         self.X = self.Y = self.Z = None
         self.choice_is_null = True
-        #self.geometry('1000x600+50+50')
-        self.geometry("{0}x{1}+0+0".format(self.winfo_screenwidth(), self.winfo_screenheight()))
-        self.pack_propagate(0)
 
         self.menubar = MenuBarExtended(self)
-        self.sheet_frame = WindowFrame(self)
 
         self.config(menu=self.menubar)
 
-        self.sheet = tksheet.Sheet(self.sheet_frame, width=self.winfo_screenwidth(), height=self.winfo_screenheight()-50)
-        self.sheet_frame.place(width=self.winfo_width(), 
-            height=self.winfo_height()-50,
-            x=config.sheetf_coords[0], 
-            y=config.sheetf_coords[1])
+        self.sheet = tksheet.Sheet(self, width=1000, height=600)
+
+        self.columnconfigure(0, weight=3)
+        self.rowconfigure(0, weight=3)
+ 
 
         self.sheet.enable_bindings(("all"))
-        self.sheet.pack(expand=True,fill='both')
+        self.sheet.grid(row=0, column=0, sticky=N+S+W+E)
+        self.sheet.columnconfigure(1, weight=3)
+        self.sheet.rowconfigure(1, weight=3)
         if self.sheet_font:
             styler = ChartifyStyler(self, self.sheet, figure=self.fig)
             styler.set_sheet_font(self.sheet_font)
@@ -605,7 +602,9 @@ class ChartifyAppExtended(tk.Tk):
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
                         #print("min while plotting", self.xaxis_min)
                         #print("max while plotting", self.xaxis_max)
-                        self.plotCubeAt(pos=(startunits+duration/2,y,z),size=(duration,0.1,0.1),color=obj_color, ax=ax)
+
+                        plot_pos = startunits+duration/2,y,z
+                        self.plotCubeAt(pos=(plot_pos),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
 
