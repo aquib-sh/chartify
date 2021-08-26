@@ -51,8 +51,8 @@ class MenuBar(tk.Menu):
         deletemenu.add_command(label="Row", command=None)
         deletemenu.add_command(label="Column", command=self.master.delete_column)
 
-        clearmenu.add_command(label="Row", command=None)
-        clearmenu.add_command(label="Column", command=None)
+        #clearmenu.add_command(label="Row", command=None)
+        clearmenu.add_command(label="Column", command=self.master.clear_column)
 
         filemenu.add_command(label="Open", command=self.master.open_file)
         filemenu.add_command(label="Save", command=self.master.save_file)
@@ -118,8 +118,8 @@ class MenuBarExtended(tk.Menu):
         deletemenu.add_command(label="Row", command=None)
         deletemenu.add_command(label="Column", command=self.master.delete_column)
 
-        clearmenu.add_command(label="Row", command=None)
-        clearmenu.add_command(label="Column", command=None)
+        #clearmenu.add_command(label="Row", command=None)
+        clearmenu.add_command(label="Column", command=self.master.clear_column)
 
         filemenu.add_command(label="Open", command=self.master.open_file)
         filemenu.add_command(label="Save", command=self.master.save_file)
