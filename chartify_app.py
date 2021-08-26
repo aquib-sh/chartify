@@ -514,8 +514,12 @@ class ChartifyAppExtended(tk.Tk):
                     odstep_min = 60
                 elif dminutes <= 2000:
                     odstep_min = 120
-                elif dminutes >= 3000:
+                elif dminutes <= 3000:
                     odstep_min = 240
+                elif dminutes <= 10000:
+                    odstep_min = 1000
+                else:
+                    odstep_min = 10000
 
                 #print(f"Dmins is {dminutes}, odstep is {odstep_min}")
                 time_label_format = None
@@ -987,6 +991,7 @@ class ChartifyAppExtended(tk.Tk):
 
     def insert_new_column(self):
         """Inserts a new column into spreadsheet."""
+        self.df = pandas.DataFrame(self.sheet.get_sheet_data(), columns=self.sheet.headers())
         insert_window = InsertWindow(self.adapter, "new_col", title="Insert Column", size=(400,200), _type="column")
         insert_window.start()
         new_col = self.adapter.get("new_col")
@@ -995,10 +1000,12 @@ class ChartifyAppExtended(tk.Tk):
         df_rows = self.df.to_numpy().tolist()  
         self.sheet.headers(self.df.columns.tolist())
         self.sheet.set_sheet_data(df_rows)
+        self.choice_is_null = True
 
 
     def insert_row(self):
         """Inserts a row into spreadsheet."""
+        self.df = pandas.DataFrame(self.sheet.get_sheet_data(), columns=self.sheet.headers())
         df_cols = self.df.columns.tolist()
         df_dtypes = [self.df[col].dtype for col in self.df]
 
@@ -1019,6 +1026,7 @@ class ChartifyAppExtended(tk.Tk):
 
 
     def delete_column(self):
+        self.df = pandas.DataFrame(self.sheet.get_sheet_data(), columns=self.sheet.headers())
         """Deletes a column from spreadsheet."""
         delete_window = InsertWindow(self.adapter, "del_col", title="Delete Column", size=(400,200), _type="column")
         delete_window.start()
@@ -1028,7 +1036,8 @@ class ChartifyAppExtended(tk.Tk):
         df_rows = self.df.to_numpy().tolist()  
         self.sheet.headers(self.df.columns.tolist())
         self.sheet.set_sheet_data(df_rows)
-        
+        self.choice_is_null = True
+
 
     def detect_collision(self):
         if self.choice_is_null : self.open_column_selection()
