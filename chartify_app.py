@@ -1039,6 +1039,20 @@ class ChartifyAppExtended(tk.Tk):
         self.choice_is_null = True
 
 
+    def clear_column(self):
+        """Clears the value in a column from spreadsheet."""
+        self.df = pandas.DataFrame(self.sheet.get_sheet_data(), columns=self.sheet.headers())
+        clear_window = InsertWindow(self.adapter, "clr_col", title="Clear Column", size=(400,200), _type="column")
+        clear_window.start()
+        new_col = self.adapter.get("clr_col")
+        # Clear column
+        self.df[new_col] = ['' for i in range(0, len(self.df[new_col]))]
+        # Set the newly modified data.
+        df_rows = self.df.to_numpy().tolist()  
+        self.sheet.headers(self.df.columns.tolist())
+        self.sheet.set_sheet_data(df_rows)
+
+
     def detect_collision(self):
         if self.choice_is_null : self.open_column_selection()
         
