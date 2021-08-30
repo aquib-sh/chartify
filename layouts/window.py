@@ -1,8 +1,9 @@
 #Author : Shaikh Aquib
 #Date : June 2021
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import sys
+import pandas
 import tkinter as tk
 from tkinter import Scrollbar, ttk
 from tkinter import messagebox
@@ -503,29 +504,47 @@ class RangeSelectionWindow(TopLevelWindow):
         self.choice1_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_start)
         self.choice2_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_start)
 
+        self.choice3_start_t = self.choice3_end_t = None
+
         if datetime:
-            self.choice3_start = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_start)
+            self.choice3_start   = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_start)
+            self.choice3_start_t = ttk.Entry(self, width=30)
+            
+            Label(self, text="Date")     .grid(row=4, column=0)
+            Label(self, text="hh:mm:ss") .grid(row=5, column=0)
+
+            self.choice3_start   .grid(row=4, column=1)
+            self.choice3_start_t .grid(row=5, column=1) 
         else:
             self.choice3_start = ttk.Entry(self, width=30)
+            self.choice3_start.grid(row=3, column=1) 
+
 
         self.choice1_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n1_end)
         self.choice2_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n2_end)
         
         if datetime:
             self.choice3_end = ttk.Combobox(self, state="readonly", width=27, textvariable=self.n3_end)
+            self.choice3_end_t = ttk.Entry(self, width=30)
+            self.choice3_end   .grid(row=4, column=2)
+            self.choice3_end_t .grid(row=5, column=2) 
         else:
             self.choice3_end = ttk.Entry(self, width=30)
 
         self.choice1_start.grid(row=1, column=1)
         self.choice2_start.grid(row=2, column=1)
-        self.choice3_start.grid(row=3, column=1)
+        #self.choice3_start.grid(row=3, column=1) 
         
         self.choice1_end.grid(row=1, column=2)
         self.choice2_end.grid(row=2, column=2)
-        self.choice3_end.grid(row=3, column=2)
+        #self.choice3_end.grid(row=3, column=2)
 
         build_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
-        build_btn.grid(row=4, column=0, padx=(200, 100), pady=(150,100))
+        
+        if datetime:
+            build_btn.grid(row=6, column=0, padx=(200, 100), pady=(150,100))
+        else:
+            build_btn.grid(row=4, column=0, padx=(200, 100), pady=(150,100))
 
 
     def set_min_max(self, yaxis: str, zaxis: str):
@@ -551,11 +570,45 @@ class RangeSelectionWindow(TopLevelWindow):
         self.choice2_end.current(0)
 
         if self.isdaterange:
-            self.choice3_start['values'] = self.df[self.xstart].sort_values().unique().tolist()
-            self.choice3_end['values']   = self.df[self.xstart].sort_values(ascending=False).unique().tolist()
+            start = self.df[self.xstart].sort_values().unique().tolist()
+            end   = self.df[self.xstart].sort_values(ascending=False).unique().tolist()
+
+            self.choice3_start['values'] = self.get_unique_dates(start)
+            self.choice3_end['values']   = self.get_unique_dates(end)
             self.choice3_start.current(0)
             self.choice3_end.current(0)
 
+
+    def get_unique_dates(self, l:list) -> list:
+        """Takes a list of string datetimes and 
+            returns the unique dates string list."""
+        dates_list = []
+        for dtime in l:
+            val = str(pandas.to_datetime(dtime).date())
+            dates_list.append(val)
+        return list(set(dates_list))
+            
+    
+    def set_timedata_to_date(self, str_date, time_str):
+        hrs = mins = secs = 0
+        time_parts = time_str.split(":")
+        
+        if len(time_parts) > 0:
+            hrs = int(time_parts[0])
+            
+            if len(time_parts) > 1:
+                mins = int(time_parts[1])
+
+                if len(time_parts) > 2:
+                    secs = int(time_parts[2])
+
+        attached_time = pandas.to_datetime(str_date) + timedelta(
+            hours   = hrs,
+            minutes = mins,
+            seconds = secs
+        )
+        return attached_time    
+            
 
     def transfer_value_and_destroy(self):
         """Returns the textbox value."""
@@ -564,7 +617,10 @@ class RangeSelectionWindow(TopLevelWindow):
         self.adapter.insert('zaxis_min', self.n2_start.get())
     
         if self.isdaterange:
-            self.adapter.insert('xaxis_min', self.n3_start.get())
+            date = self.n3_start.get()
+            time = self.choice3_start_t.get()
+            date_w_attached = self.set_timedata_to_date(date, time)
+            self.adapter.insert('xaxis_min', str(date_w_attached))
         else:
             xmin = self.choice3_start.get()
             if xmin == '':
@@ -576,7 +632,10 @@ class RangeSelectionWindow(TopLevelWindow):
         self.adapter.insert('zaxis_max', self.n2_end.get())
         
         if self.isdaterange:
-            self.adapter.insert('xaxis_max', self.n3_end.get())
+            date = self.n3_end.get()
+            time = self.choice3_end_t.get()
+            date_w_attached = self.set_timedata_to_date(date, time)
+            self.adapter.insert('xaxis_max', str(date_w_attached))
         else:
             xmax = self.choice3_end.get()
             if xmax == '':
