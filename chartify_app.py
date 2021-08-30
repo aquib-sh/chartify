@@ -1106,7 +1106,7 @@ class ChartifyAppExtended(tk.Tk):
         intersections: list[tuple] = [] # list of intersecting x,y,z co-ordinates.
         #breakpoint()
         for i in range(0, len(self.graph_coords['x'])):
-            if round(self.graph_coords['x'][i]) == round(xpoint_of_plane):
+            if round(self.graph_coords['x'][i], 2) == round(xpoint_of_plane, 2):
                 coords = (xpoint_of_plane, self.graph_coords['y'][i], self.graph_coords['z'][i])
                 intersections.append(coords)
         return intersections
