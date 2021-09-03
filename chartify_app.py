@@ -1,5 +1,6 @@
 import os
 import sys
+import math
 from tkinter import font
 from matplotlib import colors
 from numpy.core.fromnumeric import size, sort
@@ -288,6 +289,7 @@ class ChartifyAppExtended(tk.Tk):
              [o[2] + h, o[2] + h, o[2] + h, o[2] + h, o[2] + h],   
              [o[2], o[2], o[2] + h, o[2] + h, o[2]],               
              [o[2], o[2], o[2] + h, o[2] + h, o[2]]]               
+        print("X ->", x)
         return np.array(x), np.array(y), np.array(z)
 
 
@@ -634,7 +636,6 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
-
                         # Drawing Auxillary lines and markings on intersections
                         intersections = self.detect_intersection(modx[0][0])
                         if len(intersections) == 0:
@@ -799,7 +800,7 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
-            
+                        #breakpoint()
                         # Drawing Auxillary lines and markings on intersections
                         intersections = self.detect_intersection(modx[0][0])
                         if len(intersections) == 0:
@@ -1104,10 +1105,21 @@ class ChartifyAppExtended(tk.Tk):
                 x co-ordinate of the cutting plane.
         """
         intersections: list[tuple] = [] # list of intersecting x,y,z co-ordinates.
-        #breakpoint()
         for i in range(0, len(self.graph_coords['x'])):
-            if round(self.graph_coords['x'][i], 2) == round(xpoint_of_plane, 2):
-                coords = (xpoint_of_plane, self.graph_coords['y'][i], self.graph_coords['z'][i])
+
+            pointx = self.graph_coords['x'][i]
+            pointy = self.graph_coords['y'][i]
+            pointz = self.graph_coords['z'][i]
+            if (
+                (pointx == xpoint_of_plane)
+                or
+                (round(pointx, 1) == round(xpoint_of_plane, 1))
+                or
+                ((pointx > xpoint_of_plane) and (pointx <= (xpoint_of_plane+0.3)))
+                or
+                ((pointx < xpoint_of_plane) and (pointx >= (xpoint_of_plane-0.3)))
+            ):
+                coords = (xpoint_of_plane, pointy, pointz)
                 intersections.append(coords)
         return intersections
 
