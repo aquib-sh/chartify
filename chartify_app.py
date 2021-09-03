@@ -69,6 +69,14 @@ class ChartifyAppExtended(tk.Tk):
         self.xaxis_max            = None
         self.cache = {'fig_bg':None, 'sheet_font':None, 'sheet_fsize':None}
         self.graph_coords = {'x':[], 'y':[], 'z':[]}
+        self.raw_graph_coords = {'x':[], 'y':[], 'z':[]}
+        # Keep track of cube start and end positions along with y, z
+        self.cubes = {
+                'start' : [], 
+                'end'   : [],
+                'y'     : [],
+                'z'     : []
+            } 
         self.saver = CacheSaver()
         self.color_cache = CacheProcessor("colors.db", "colors")
         self.retriever = CacheRetriever()
@@ -289,19 +297,33 @@ class ChartifyAppExtended(tk.Tk):
              [o[2] + h, o[2] + h, o[2] + h, o[2] + h, o[2] + h],   
              [o[2], o[2], o[2] + h, o[2] + h, o[2]],               
              [o[2], o[2], o[2] + h, o[2] + h, o[2]]]               
-        print("X ->", x)
         return np.array(x), np.array(y), np.array(z)
 
 
     def plotCubeAt(self, pos=(0,0,0),size=(1,1,1),color='b', ax=None):
         if ax !=None:
             x, y, z = self.cuboid_data(pos,size )
-            self.temp = x
-            self.graph_coords['x'] += self.__straighten_list(list(x)) # Add the x-coords into the tracker
-            self.graph_coords['y'] += self.__straighten_list(list(y)) # Add the y-coords into the tracker
-            self.graph_coords['z'] += self.__straighten_list(list(z)) # Add the z-coords into the tracker
+            self.temp = x            
+            self.raw_graph_coords['x'].append(x.copy())
+            self.raw_graph_coords['y'].append(y.copy())
+            self.raw_graph_coords['z'].append(z.copy())
+
+            plain_x = self.__straighten_list(list(x))
+            plain_y = self.__straighten_list(list(y))
+            plain_z = self.__straighten_list(list(z))
+            avg_y   = sum(plain_y)/len(plain_y)
+            avg_z   = sum(plain_z)/len(plain_z)
+
+            self.graph_coords['x'] += plain_x # Add the x-coords into the tracker
+            self.graph_coords['y'] += plain_y # Add the y-coords into the tracker
+            self.graph_coords['z'] += plain_z # Add the z-coords into the tracker
+
+            self.cubes['start'].append(min(plain_x))
+            self.cubes['end'].append(max(plain_x))
+            self.cubes['y'].append(avg_y)
+            self.cubes['z'].append(avg_z)
+            
             ax.plot_surface(x,y,z, color=color)
-            #print("plotting X at:", x)
 
 
     def convert_timeunit(self, d: datetime.datetime) -> int:
@@ -422,7 +444,12 @@ class ChartifyAppExtended(tk.Tk):
         
 
     def plot_chart(self, tool="draw", fig_present=False):
-        self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} # Empty the coordinates tracker before plotting a new chart
+        """Plots the chart based on data type."""
+        # Empty the coordinates tracker before plotting a new chart
+        self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} 
+        self.raw_graph_coords = {'x':[], 'y':[], 'z':[]}
+        self.cubes = {'start':[], 'end':[], 'y':[], 'z':[]}
+
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns = sheet_headers) 
@@ -722,12 +749,8 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_zticks(self.Z)
                 #print(f"Z Axis labels : {rooms}")
                 ax.set_zticklabels(rooms, fontsize=10)
-
                 self.axes = ax               
-
-                #print(f"MIN: {min}")
-                #print(f"MAX: {max}")
-
+                
                 try:
                     for index, row in df.iterrows():
  
@@ -800,7 +823,6 @@ class ChartifyAppExtended(tk.Tk):
                         slaby = Slab(self.axes)
                         modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
                         self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
-                        #breakpoint()
                         # Drawing Auxillary lines and markings on intersections
                         intersections = self.detect_intersection(modx[0][0])
                         if len(intersections) == 0:
@@ -830,7 +852,7 @@ class ChartifyAppExtended(tk.Tk):
                 marker='D', 
                 alpha=1, 
                 color=self.marker_color, 
-                s=50)
+                s=100)
 
             # ============== lines from y axis ===============
             y = [coords[1]]
@@ -886,8 +908,6 @@ class ChartifyAppExtended(tk.Tk):
             self.yaxis_max = self.adapter.get('yaxis_max')
             self.zaxis_max = self.adapter.get('zaxis_max')
             self.xaxis_max = self.adapter.get('xaxis_max')
-            print(f"Appended xaxis_min : {self.xaxis_min}")
-            print(f"Appended xaxis_max : {self.xaxis_max}")
             self.adapter.delete('range_window_opened')
 
         self.choice_is_null = False
@@ -1061,7 +1081,6 @@ class ChartifyAppExtended(tk.Tk):
         sheet_headers = self.sheet.headers()
         df = pandas.DataFrame(sheet_data, columns=sheet_headers) 
 
-        print(self.xaxis_dtype)
         if self.xaxis_dtype not in ["Number", "KiloMeter", "Meter"]:
             end_time = []
             df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
@@ -1105,22 +1124,16 @@ class ChartifyAppExtended(tk.Tk):
                 x co-ordinate of the cutting plane.
         """
         intersections: list[tuple] = [] # list of intersecting x,y,z co-ordinates.
-        for i in range(0, len(self.graph_coords['x'])):
+        for i in range(0, len(self.cubes['start'])):
+            start  = self.cubes['start'][i]
+            end    = self.cubes['end'][i]
+            pointy = self.cubes['y'][i]
+            pointz = self.cubes['z'][i]
 
-            pointx = self.graph_coords['x'][i]
-            pointy = self.graph_coords['y'][i]
-            pointz = self.graph_coords['z'][i]
-            if (
-                (pointx == xpoint_of_plane)
-                or
-                (round(pointx, 1) == round(xpoint_of_plane, 1))
-                or
-                ((pointx > xpoint_of_plane) and (pointx <= (xpoint_of_plane+0.3)))
-                or
-                ((pointx < xpoint_of_plane) and (pointx >= (xpoint_of_plane-0.3)))
-            ):
+            if (xpoint_of_plane >= start) and (xpoint_of_plane <= end):
                 coords = (xpoint_of_plane, pointy, pointz)
                 intersections.append(coords)
+
         return intersections
 
 
