@@ -116,13 +116,14 @@ class Slab:
             ylen = len(self.axes.get_yticklabels())
             zlen = len(self.axes.get_zticklabels())
 
-        X = np.array([[point]*ylen for i in range(0, zlen)])
+        X = np.array([[point]*(ylen+1) for i in range(0, zlen)])
         Y = []
         Z = []
 
         for i in range(0, zlen):
             tempy = []
             temp_ystart = ystart
+            tempy.append(temp_ystart-0.1)
             for j in range(0, ylen):
                 tempy.append(temp_ystart)
                 temp_ystart += ydiff
@@ -131,7 +132,7 @@ class Slab:
 
         for i in range(0, zlen):
             tempz = []
-            for j in range(0, ylen):
+            for j in range(0, ylen+1):
                 tempz.append(zstart)
             zstart += zdiff
             Z.append(tempz)
