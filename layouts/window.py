@@ -530,14 +530,13 @@ class RangeSelectionWindow(TopLevelWindow):
             self.choice3_end_t .grid(row=5, column=2) 
         else:
             self.choice3_end = ttk.Entry(self, width=30)
+            self.choice3_end.grid(row=3, column=2)
 
         self.choice1_start.grid(row=1, column=1)
         self.choice2_start.grid(row=2, column=1)
-        #self.choice3_start.grid(row=3, column=1) 
         
         self.choice1_end.grid(row=1, column=2)
         self.choice2_end.grid(row=2, column=2)
-        self.choice3_end.grid(row=3, column=2)
 
         build_btn = ttk.Button(self, text="Apply", command=self.transfer_value_and_destroy)
         
