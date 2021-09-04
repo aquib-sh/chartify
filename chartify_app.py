@@ -367,9 +367,6 @@ class ChartifyAppExtended(tk.Tk):
                 hour   = min.hour
                 minute = min.minute
                 second = min.second
-                #hour   = int(min.hour + i*7*24) % 24
-                #minute = int(min.minute + i*7*24*60) % 60
-                #seconds = int(min.second )
 
             elif self.duration_dtype == "Day":
                 year   = min.year   + i//365
@@ -443,12 +440,134 @@ class ChartifyAppExtended(tk.Tk):
         return res
         
 
+    def set_axes_labels(self, axes, xlbl:str, ylbl:str, zlbl:str):
+        """Sets the labels for the axis provided."""
+        axes.set_xlabel(
+            xlbl, 
+            fontweight ='bold', 
+            labelpad=30, 
+            font=self.chart_axis_lbl_font, 
+            fontsize=self.chart_axis_lbl_fsize
+        )
+        axes.set_ylabel(
+            ylbl, 
+            fontweight='bold', 
+            font=self.chart_axis_lbl_font, 
+            fontsize=self.chart_axis_lbl_fsize
+        )
+        axes.set_zlabel(
+            zlbl, 
+            fontweight='bold', 
+            font=self.chart_axis_lbl_font, 
+            fontsize=self.chart_axis_lbl_fsize
+        )
+
+
+    def update_rgba_from_cache(self):
+        stored_colors = self.color_cache.retrieve_cache()
+        if self.chart_axis_lbl_color in stored_colors:
+            self.chart_axis_lbl_color = stored_colors[self.chart_axis_lbl_color] 
+                
+        if self.chart_title_color in stored_colors:
+            self.chart_title_color = stored_colors[self.chart_title_color]
+        
+        if self.fig_bg in stored_colors:
+            self.fig_bg = stored_colors[self.fig_bg]
+
+        if self.actual_fig_bg in stored_colors:
+            self.actual_fig_bg = stored_colors[self.actual_fig_bg]
+        
+
+    def set_axes_label_color(self, axes, xlbl_color, ylbl_color, zlbl_color):
+        """Sets the color of axes labels in 3D chart for x, y, z."""
+        axes.xaxis.label.set_color(xlbl_color)
+        axes.yaxis.label.set_color(ylbl_color)
+        axes.zaxis.label.set_color(zlbl_color)
+        
+        
+    def set_actual_fig_bg(self, axes, color):
+        """Sets the background of the actual figure."""
+        axes.set_facecolor(self.actual_fig_bg)
+
+
+    def calculate_step_values(self, points) -> int:
+        """Decides values to jump/step value of x axis points."""
+        jump = 1
+        if   points <= 25    : jump = 5
+        elif points <= 50    : jump = 10
+        elif points <= 100   : jump = 15
+        elif points <= 500   : jump = 30
+        elif points <= 1000  : jump = 60
+        elif points <= 2000  : jump = 120
+        elif points <= 3000  : jump = 240
+        elif points <= 10000 : jump = 1000
+        elif points >  10000 : jump = 10000
+        return jump
+
+
+    def draw_cut_chart(self, datatype:str, 
+        timeseries=None, figure_present=False
+        ):
+
+        if datatype not in ['time', 'numerical']:
+            raise Exception("[!] datatype parameter must be 'time' or 'numerical'")
+
+        # If data is time but the timeseries data is not provided
+        if datatype == 'time' and not timeseries:
+            raise Exception("[!] 'time' datatype requires timeseries data.")
+
+        self.graph_coords['xplane'] = []
+        slab_color  = 'cyan'
+        alpha_value = 0.4
+
+        if datatype == "time":
+            slab_color = 'red'
+            tmap = TimelineMapper(timeseries, self.X)
+            dates = tmap.get_all_dates()
+            
+            settings = CutChartSettings(self.adapter, dates)
+            settings.start()
+            
+            selected_date = self.adapter.get('cut-chart-setting-date')
+            selected_time = self.adapter.get('cut-chart-setting-time')
+            # Get the cutting point
+            xpoint = tmap.get_point(f"{selected_date} {selected_time}")
+        
+        elif datatype == "numerical":
+            settings = CutChartNumericalSettings(self.adapter)
+            settings.start()
+            # Get the cutting point
+            xpoint = float(self.adapter.get('cut-chart-setting-point'))
+
+        print("Reached till slab")
+        slaby = Slab(self.axes)
+        x, y, z = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
+        self.axes.plot_surface(
+            x, y, z, 
+            color=slab_color, 
+            alpha=alpha_value
+        )
+        # Drawing Auxillary lines and markings on intersections
+        intersections = self.detect_intersection(x[0][0])
+        
+        print("[+] Intersections detection done")
+
+        if len(intersections) == 0:
+            print("[+] No intersections found")
+        else:
+            self.plot_intersections(intersections)
+
+        print("Drawing figure")
+        if figure_present : plt.draw()
+        else              : plt.show()
+
+
     def plot_chart(self, tool="draw", fig_present=False):
         """Plots the chart based on data type."""
         # Empty the coordinates tracker before plotting a new chart
         self.graph_coords['cuboids'] = {'x':[], 'y':[], 'z':[]} 
-        self.raw_graph_coords = {'x':[], 'y':[], 'z':[]}
-        self.cubes = {'start':[], 'end':[], 'y':[], 'z':[]}
+        self.raw_graph_coords        = {'x':[], 'y':[], 'z':[]}
+        self.cubes                   = {'start':[], 'end':[], 'y':[], 'z':[]}
 
         sheet_data    = self.sheet.get_sheet_data()
         sheet_headers = self.sheet.headers()
@@ -469,28 +588,20 @@ class ChartifyAppExtended(tk.Tk):
 
             ax = self.axes
 
-            ax.set_xlabel(self.xaxis_column, fontweight ='bold', labelpad=30, font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
-            ax.set_ylabel(self.yaxis_column, fontweight ='bold', font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
-            ax.set_zlabel(self.zaxis_column, fontweight ='bold', font=self.chart_axis_lbl_font, fontsize=self.chart_axis_lbl_fsize)
-
-            stored_colors = self.color_cache.retrieve_cache()
-            if self.chart_axis_lbl_color in stored_colors:
-                self.chart_axis_lbl_color = stored_colors[self.chart_axis_lbl_color] 
-                    
-            if self.chart_title_color in stored_colors:
-                self.chart_title_color = stored_colors[self.chart_title_color]
-            
-            if self.fig_bg in stored_colors:
-                self.fig_bg = stored_colors[self.fig_bg]
-
-            if self.actual_fig_bg in stored_colors:
-                self.actual_fig_bg = stored_colors[self.actual_fig_bg]
-
-            ax.xaxis.label.set_color(self.chart_axis_lbl_color)
-            ax.yaxis.label.set_color(self.chart_axis_lbl_color)
-            ax.zaxis.label.set_color(self.chart_axis_lbl_color)
-
-            ax.set_facecolor(self.actual_fig_bg)
+            self.set_axes_labels(
+                axes=ax, 
+                xlbl=self.xaxis_column, 
+                ylbl=self.yaxis_column, 
+                zlbl=self.zaxis_column
+            )
+            self.update_rgba_from_cache()
+            self.set_axes_label_color(
+                axes=ax,
+                xlbl_color=self.chart_axis_lbl_color,
+                ylbl_color=self.chart_axis_lbl_color,
+                zlbl_color=self.chart_axis_lbl_color
+            )   
+            self.set_actual_fig_bg(axes=ax, color=self.actual_fig_bg)
 
             dtype_xaxis = str(df[self.xaxis_column].dtype)
 
@@ -523,34 +634,16 @@ class ChartifyAppExtended(tk.Tk):
                 else:
                     max = maxvals[self.xaxis_column]+datetime.timedelta(minutes=int(maxvals[self.duration_column]))
                 
-                # If date
-                d = max - min # okres
+                d = max - min # period
 
-                #ile jest minut od pocztku pierwszego do koca ostatniego wykadu
+                # how many minutes are there from the beginning 
+                # of the first lecture to the end of the last lecture
                 dminutes = self.convert_timeunit(d)
 
                 ax.set_xlim(0,dminutes)
 
-                odstep_min = 1
-                
-                if dminutes <= 50:
-                    pass
-                elif dminutes <= 100:
-                    odstep_min = 10
-                elif dminutes <= 500:
-                    odstep_min = 30
-                elif dminutes <= 1000:
-                    odstep_min = 60
-                elif dminutes <= 2000:
-                    odstep_min = 120
-                elif dminutes <= 3000:
-                    odstep_min = 240
-                elif dminutes <= 10000:
-                    odstep_min = 1000
-                else:
-                    odstep_min = 10000
+                odstep_min = self.calculate_step_values(points=dminutes)
 
-                #print(f"Dmins is {dminutes}, odstep is {odstep_min}")
                 time_label_format = None
 
                 if self.xaxis_dtype == "Time(yyyy-mm-dd hh:mm:ss)":
@@ -558,7 +651,12 @@ class ChartifyAppExtended(tk.Tk):
                 else:
                     time_label_format = "{dd}/{mm}/{yyyy} {hh}:{_mm}:{ss}"
 
-                start_times = self.generate_timeseries_xaxis(end=dminutes, step=odstep_min, label_format=time_label_format, min=min)
+                start_times = self.generate_timeseries_xaxis(
+                    end=dminutes, 
+                    step=odstep_min, 
+                    label_format=time_label_format, 
+                    min=min
+                )
 
                 self.X = np.arange(0,dminutes,odstep_min)
                 #print("X axis coords are", self.X)
@@ -567,16 +665,16 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_xticklabels(start_times, rotation='vertical', fontsize=9)
 
                 #lista osób prowadzacych zajęcia
-                profesors = df[self.yaxis_column].unique()
+                professors = df[self.yaxis_column].unique()
 
                 if self.yaxis_min != None and self.yaxis_max != None:
-                     profesors = [prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)]
+                     professors = [prof for prof in professors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)]
 
-                ax.set_ylim(0,len(profesors))
-                self.Y = np.arange(0,len(profesors),1)
+                ax.set_ylim(0,len(professors))
+                self.Y = np.arange(0,len(professors),1)
                 ax.set_yticks(self.Y)
             
-                ax.set_yticklabels(profesors, fontsize=10)
+                ax.set_yticklabels(professors, fontsize=10)
 
                 rooms = df[self.zaxis_column].unique()
 
@@ -614,12 +712,12 @@ class ChartifyAppExtended(tk.Tk):
                             ((self.zaxis_min != None and self.zaxis_max != None) 
                             and ((room < self.zaxis_min) or (room > self.zaxis_max))
                             )
-                            ) : continue
+                        ) : continue
 
                         d = start - min
                         startunits = self.convert_timeunit(d)
 
-                        y = np.where(np.array(profesors) == prof)[0][0]
+                        y = np.where(np.array(professors) == prof)[0][0]
                         z = np.where(np.array(rooms) == room)[0][0]
                         
                         # Get color from database.
@@ -633,14 +731,11 @@ class ChartifyAppExtended(tk.Tk):
                             obj_color = self.adapter.get(prof)
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
-                        #print("min while plotting", self.xaxis_min)
-                        #print("max while plotting", self.xaxis_max)
 
                         plot_pos = startunits+duration/2,y,z
                         self.plotCubeAt(pos=(plot_pos),size=(duration,0.1,0.1),color=obj_color, ax=ax)
                         
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
-
                     plt.setp(plot_title, color=self.chart_title_color)
                 
                     if self.fig_bg : self.fig.patch.set_facecolor(self.fig_bg)
@@ -649,32 +744,14 @@ class ChartifyAppExtended(tk.Tk):
                         plt.show()
                         
                     elif tool == "cut":
-                        self.graph_coords['xplane'] = []
-                        tmap = TimelineMapper(start_times, self.X)
-                        dates = tmap.get_all_dates()
-
-                        
-                        settings = CutChartSettings(self.adapter, dates)
-                        settings.start()
-                        selected_date = self.adapter.get('cut-chart-setting-date')
-                        selected_time = self.adapter.get('cut-chart-setting-time')
-
-                        point = tmap.get_point(f"{selected_date} {selected_time}")
-                        slaby = Slab(self.axes)
-                        modx, mody, modz = slaby.insert_slab_by_x(point=point, X=self.X, Y=self.Y, Z=self.Z)
-                        self.axes.plot_surface(modx, mody, modz, color="red", alpha=0.4)
-                        # Drawing Auxillary lines and markings on intersections
-                        intersections = self.detect_intersection(modx[0][0])
-                        if len(intersections) == 0:
-                            print("[+] No intersections found")
-                        else:
-                            self.plot_intersections(intersections)
-
-                        if fig_present : plt.draw()
-                        else : plt.show()
+                        self.draw_cut_chart(
+                            datatype='time',
+                            timeseries=start_times,
+                            figure_present=fig_present
+                        )
             
                 except Exception as e:
-                    messagebox.showerror("Błąd","Bład podczas tworzenia plot_chartu\r\n"+traceback.format_exc())
+                    messagebox.showerror("Error","Error creating plot\r\n"+traceback.format_exc())
 
             # ===================================================================================================
             # ===================================== NUMERIC DATA TYPE ===========================================
@@ -682,7 +759,7 @@ class ChartifyAppExtended(tk.Tk):
             elif dtype_xaxis in ['float64', 'int64']:
 
                 df.sort_values(by=[self.xaxis_column],inplace=True)
-                #okreslamy zakres czasowy 
+                # time range
                 minvals = df.min()
                 maxvals = df.max()
 
@@ -690,17 +767,14 @@ class ChartifyAppExtended(tk.Tk):
                 else : min = 0
 
                 if self.xaxis_max: 
-                    #max = self.num_add_duration_to_start(float(self.xaxis_max), maxvals[self.duration_column])
                     max = float(self.xaxis_max)
+                else: 
+                    max = self.num_add_duration_to_start(
+                        maxvals[self.xaxis_column], 
+                        maxvals[self.duration_column]
+                    )
 
-                else : max = self.num_add_duration_to_start(maxvals[self.xaxis_column], maxvals[self.duration_column])
-
-                jump = 1 # steps for xlabel
-
-                if   max >= 100 : jump = 15
-                elif max >= 50  : jump = 10
-                elif max >= 25  : jump = 5
-                elif max >= 10  : jump = 2
+                jump = self.calculate_step_values(points=max)
 
                 self.X = []
 
@@ -724,30 +798,42 @@ class ChartifyAppExtended(tk.Tk):
                 ax.set_xticklabels(self.X, rotation='vertical', fontsize=9)
                 ax.set_xlim(0, int(max))
 
-                #lista osób prowadzacych zajęcia
-                profesors = df[self.yaxis_column].unique()
+                # object list
+                professors = df[self.yaxis_column].unique()
 
                 if self.yaxis_min != None and self.yaxis_max != None:
-                     profesors = sort([prof for prof in profesors if (prof >= self.yaxis_min) and (prof <= self.yaxis_max)])
+                    temp = []
+                    for prof in professors:
+                        if ((prof >= self.yaxis_min) and (prof <= self.yaxis_max)):
+                            temp.append(temp)
 
-                profesors.sort()
+                    professors = temp.copy()
+                    del temp
 
-                ax.set_ylim(0,len(profesors))
-                self.Y = np.arange(0,len(profesors),1)
-                #print(f"Y Axis labels : {profesors}")
+                professors.sort()
+
+                ax.set_ylim(0,len(professors))
+                self.Y = np.arange(0,len(professors),1)
                 ax.set_yticks(self.Y)
-                ax.set_yticklabels(profesors, fontsize=10)
+                ax.set_yticklabels(professors, fontsize=10)
 
                 #lista sal
                 rooms = df[self.zaxis_column].unique()
 
                 if self.zaxis_min != None and self.zaxis_max != None:
-                     rooms = [room for room in rooms if (room >= self.zaxis_min) and (room <= self.zaxis_max)]
+                    temp = []
+                    for room in rooms:
+                        if (room >= self.zaxis_min) and (room <= self.zaxis_max):
+                            temp.append(room)
+
+                    rooms = temp.copy()
+                    del temp
+
+                rooms.sort()
 
                 ax.set_zlim(0,len(rooms))
                 self.Z = np.arange(0,len(rooms),1)
                 ax.set_zticks(self.Z)
-                #print(f"Z Axis labels : {rooms}")
                 ax.set_zticklabels(rooms, fontsize=10)
                 self.axes = ax               
                 
@@ -778,7 +864,7 @@ class ChartifyAppExtended(tk.Tk):
                             )
                             ) : continue
                         
-                        _y = np.where(np.array(profesors) == prof)[0]
+                        _y = np.where(np.array(professors) == prof)[0]
                         _z = np.where(np.array(rooms) == room)[0]
 
                         if len(_y) == 0 or len(_z) == 0 : continue
@@ -787,8 +873,6 @@ class ChartifyAppExtended(tk.Tk):
                         z = _z[0]
 
                         xpos = self.num_add_duration_to_start(float(start), float(duration)/2)
-                        #xpos = float(start)
-                        #print(xpos, y, z)
                         plot_pos = (xpos,y,z) 
 
                         # Get color from database.
@@ -802,8 +886,7 @@ class ChartifyAppExtended(tk.Tk):
                             obj_color = self.adapter.get(prof)
                             # If colorname is from a stored_color db then assign the value.
                             if obj_color in stored_colors : obj_color = stored_colors[obj_color]
-                        #print("min while plotting", self.xaxis_min)
-                        #print("max while plotting", self.xaxis_max)
+
                         self.plotCubeAt(pos=plot_pos,size=(self.num_convert_duration(duration),0.1,0.1),color=obj_color, ax=ax)
 
                     plot_title = plt.title("Schedule", font=self.chart_title_font, fontsize=self.chart_title_fsize)
@@ -814,25 +897,12 @@ class ChartifyAppExtended(tk.Tk):
                     if tool == "draw":
                         plt.show()
 
-                    elif tool == "cut":
-                        self.graph_coords['xplane'] = []
-                        settings = CutChartNumericalSettings(self.adapter)
-                        settings.start()
-                        xpoint = float(self.adapter.get('cut-chart-setting-point'))
+                    elif tool == "cut":                        
+                        self.draw_cut_chart(
+                            datatype='numerical',
+                            figure_present=fig_present
+                        )
 
-                        slaby = Slab(self.axes)
-                        modx, mody, modz = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
-                        self.axes.plot_surface(modx, mody, modz, color="cyan", alpha=0.4)
-                        # Drawing Auxillary lines and markings on intersections
-                        intersections = self.detect_intersection(modx[0][0])
-                        if len(intersections) == 0:
-                            print("[+] No intersections found")
-                        else:
-                            self.plot_intersections(intersections)
-
-                        if fig_present : plt.draw()
-                        else : plt.show()
-            
                 except Exception as e:
                     messagebox.showerror("Error "," Error while creating the chart \r\n"+traceback.format_exc())
 
@@ -866,17 +936,11 @@ class ChartifyAppExtended(tk.Tk):
             z = [coords[2]]*len(y)
 
             self.axes.plot3D(x, y, z, self.aux_line_color, linestyle="--")
-
             # ============= lines from z axis ==================
             z1 = [coords[2]]
-
-            #print("minimum", min(self.Z))
-
             inc1 = 1
             while z1[-1] > min(self.Z):
                 point = coords[2]-inc1
-                #print(z1[-1])
-                #print(z1[-1] > min(self.Z))
                 z1.append(point)
                 inc1 += 1
 
@@ -923,8 +987,6 @@ class ChartifyAppExtended(tk.Tk):
         opts = ChartifyOptions(self.adapter, cols, db_colors)
         opts.add_fonts(fonts)
         opts.start()
-
-        #print(self.adapter)
 
         tbl_font             = self.adapter.get("table-font")
         tbl_fsize            = self.adapter.get("table-font-size")
@@ -1005,6 +1067,7 @@ class ChartifyAppExtended(tk.Tk):
             alpha = self.adapter.get("alpha")
             self.color_cache.insert_cache(colorname, (red, green, blue, alpha))
             #print(self.color_cache.retrieve_cache())
+
 
     def refresh(self):
         self.plot_chart(fig_present=True)
