@@ -356,7 +356,6 @@ class ChartifyAppExtended(tk.Tk):
             string containing '{}' and yyyy, mm, dd, hh, _mm, ss symbols to fill using formated strings.
         """
         data = []
-        #print(self.duration_dtype)
         weeks_in_a_year: int = 365//7
 
         for i in range(0, end, step):
@@ -385,13 +384,11 @@ class ChartifyAppExtended(tk.Tk):
                 second = min.second
 
             elif self.duration_dtype == "Minute":
-                #print("Entered minutes section")
                 year   = min.year    + i//60//24//365
                 month  = min.month   + i//60//24//30
                 day    = (min.day    + i//60//24) % 30
                 hour   = (min.hour   + i//60) % 24
                 minute = (min.minute + i) % 60
-                #print(f"BASE {min.minute}\tADD {i}\tYIELD {minute}")
                 second = min.second
         
             elif self.duration_dtype == "Second":
@@ -413,7 +410,6 @@ class ChartifyAppExtended(tk.Tk):
 
             label = label_format.format(yyyy=year, mm=month, dd=day,
                 hh=hour, _mm=minute, ss=second)
-            #print("LBL", label)
             data.append(label)
 
         return data
@@ -539,7 +535,6 @@ class ChartifyAppExtended(tk.Tk):
             # Get the cutting point
             xpoint = float(self.adapter.get('cut-chart-setting-point'))
 
-        print("Reached till slab")
         slaby = Slab(self.axes)
         x, y, z = slaby.insert_slab_by_x(point=xpoint, X=self.X, Y=self.Y, Z=self.Z)
         self.axes.plot_surface(
@@ -550,14 +545,11 @@ class ChartifyAppExtended(tk.Tk):
         # Drawing Auxillary lines and markings on intersections
         intersections = self.detect_intersection(x[0][0])
         
-        print("[+] Intersections detection done")
-
         if len(intersections) == 0:
             print("[+] No intersections found")
         else:
             self.plot_intersections(intersections)
 
-        print("Drawing figure")
         if figure_present : plt.draw()
         else              : plt.show()
 
@@ -576,7 +568,6 @@ class ChartifyAppExtended(tk.Tk):
         # Open column choice window only if it hasn't been chosen already.
         if self.choice_is_null : self.open_column_selection()
         df[self.duration_column] = pandas.to_numeric(df[self.duration_column])
-
         try:
             if not fig_present:
                 fig = plt.figure(figsize=(16,9))
@@ -604,7 +595,10 @@ class ChartifyAppExtended(tk.Tk):
             self.set_actual_fig_bg(axes=ax, color=self.actual_fig_bg)
 
             dtype_xaxis = str(df[self.xaxis_column].dtype)
-
+            
+            #================================================================= 
+            #====================== OBJECT DATATYPE ==========================
+            #=================================================================
             if dtype_xaxis == 'object':
                 df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
                 df.sort_values(by=[self.xaxis_column], inplace=True)
@@ -659,9 +653,7 @@ class ChartifyAppExtended(tk.Tk):
                 )
 
                 self.X = np.arange(0,dminutes,odstep_min)
-                #print("X axis coords are", self.X)
                 ax.set_xticks(self.X)
-                #print("LABELS SET ARE X", start_times)
                 ax.set_xticklabels(start_times, rotation='vertical', fontsize=9)
 
                 #lista osób prowadzacych zajęcia
@@ -753,18 +745,17 @@ class ChartifyAppExtended(tk.Tk):
                 except Exception as e:
                     messagebox.showerror("Error","Error creating plot\r\n"+traceback.format_exc())
 
-            # ===================================================================================================
-            # ===================================== NUMERIC DATA TYPE ===========================================
-            # ===================================================================================================
+            # =================================================================
+            # ===================== NUMERIC DATA TYPE =========================
+            # =================================================================
             elif dtype_xaxis in ['float64', 'int64']:
-
                 df.sort_values(by=[self.xaxis_column],inplace=True)
                 # time range
                 minvals = df.min()
                 maxvals = df.max()
 
                 if self.xaxis_min : min = float(self.xaxis_min)
-                else : min = 0
+                else              : min = 0
 
                 if self.xaxis_max: 
                     max = float(self.xaxis_max)
@@ -805,7 +796,7 @@ class ChartifyAppExtended(tk.Tk):
                     temp = []
                     for prof in professors:
                         if ((prof >= self.yaxis_min) and (prof <= self.yaxis_max)):
-                            temp.append(temp)
+                            temp.append(prof)
 
                     professors = temp.copy()
                     del temp
@@ -863,7 +854,7 @@ class ChartifyAppExtended(tk.Tk):
                             and ((room < self.zaxis_min) or (room > self.zaxis_max))
                             )
                             ) : continue
-                        
+
                         _y = np.where(np.array(professors) == prof)[0]
                         _z = np.where(np.array(rooms) == room)[0]
 
@@ -950,7 +941,6 @@ class ChartifyAppExtended(tk.Tk):
             self.axes.plot3D(x1, y1, z1, self.aux_line_color, linestyle="--")
 
             x=y=z=x1=y1=z1=[]
-            #print("==="*10)
 
 
     def open_column_selection(self):
@@ -1066,7 +1056,6 @@ class ChartifyAppExtended(tk.Tk):
             blue = self.adapter.get("blue")
             alpha = self.adapter.get("alpha")
             self.color_cache.insert_cache(colorname, (red, green, blue, alpha))
-            #print(self.color_cache.retrieve_cache())
 
 
     def refresh(self):
