@@ -380,7 +380,7 @@ class ChartifyAppExtended(tk.Tk):
         data = []
         weeks_in_a_year: int = 365 // 7
 
-        for i in range(0, end, step):
+        for i in range(1, end + 1, step):
             if self.duration_dtype == "Week":
                 year = min.year + (i // weeks_in_a_year)
                 month = int(min.month + (i // 4)) % 12
@@ -506,11 +506,11 @@ class ChartifyAppExtended(tk.Tk):
         """Decides values to jump/step value of x axis points."""
         jump = 1
         if points <= 25:
-            jump = 5
+            jump = 2
         elif points <= 50:
-            jump = 10
+            jump = 5
         elif points <= 100:
-            jump = 15
+            jump = 10
         elif points <= 500:
             jump = 30
         elif points <= 1000:
@@ -524,6 +524,33 @@ class ChartifyAppExtended(tk.Tk):
         elif points > 10000:
             jump = 10000
         return jump
+
+    def generate_date_range(self, series: list) -> list:
+        """Generates a series of dates ranging from the minimum date in series to the maximum date."""
+        _min = None
+        _max = None
+        timeseries = []
+
+        if self.xaxis_min != None:
+            _min = self.xaxis_min
+        else:
+            _min = min(series)
+
+        if self.xaxis_max != None:
+            _max = self.xaxis_max
+        else:
+            _max = max(series)
+
+        step = datetime.timedelta(days=1)
+        _min = pandas.to_datetime(_min)
+        _max = pandas.to_datetime(_max)
+
+        while _min <= _max:
+            print(_min)
+            timeseries.append(str(_min))
+            _min += step
+
+        return timeseries
 
     def draw_cut_chart(self, datatype: str, timeseries=None, figure_present=False):
 
@@ -796,9 +823,10 @@ class ChartifyAppExtended(tk.Tk):
                         plt.show()
 
                     elif tool == "cut":
+                        complete_series = self.generate_date_range(start_times)
                         self.draw_cut_chart(
                             datatype="time",
-                            timeseries=start_times,
+                            timeseries=complete_series,
                             figure_present=fig_present,
                         )
 
