@@ -2,6 +2,7 @@
 # Date: June 2021
 
 import pandas
+import datetime
 
 class CollisionDetector:
     """Detects Collisions Between Different Objects in Data.
@@ -106,6 +107,133 @@ class CollisionDetector:
 
 
     def reset(self):
-        """Deletes all the presents records of inconsistencies and collisions from list."""
+        """Deletes all the presents records of inconsistencies 
+           and collisions from list."""
         self.inconsis  = []
         self.collisons = []
+
+
+
+class CollisionDetectorExtended:
+    """Detects Collisions Between Different Objects in Data.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        dataframe containing all the information.
+
+    xstart : pandas.Series
+        column containing start points of x axis.   
+
+    xend : pandas.Series
+        column containing end points of x axis.
+
+    space : str
+        name of the column containing spaces where collision has to be checked.
+        (example: rooms, halls, etc)
+
+    obj : str
+        name of the column containing objects which will collided 
+        if collision occurs in space. (example: person, lecturer, etc)
+
+    _type : str
+        type of data, 'time' or 'numeric'
+
+    Attributes
+    ----------
+    inconsis:list
+        indexes of rows where inconsistencies exist in data.
+
+    collisions:list[tuple(int, int)]
+        indexes co-ordinates of all the collisions occurred so far,
+        where (i, j) in tuples represents the indexes of 2 colliding objects.
+
+    """
+    def __init__(self, dataframe, xstart, xend, space, obj):
+        self.df        = dataframe
+        self.xstart    = xstart
+        self.xend      = xend
+        self.space_col = space
+        self.obj_col   = obj
+
+    def detect(self):        
+        collisions = []
+        coll_pos = []
+        for i in range(0, len(self.xstart)):
+            space1 = self.df.loc[i][self.space_col]
+            obj1   = self.df.loc[i][self.obj_col]
+            start1 = self.xstart.loc[i]
+            end1   = self.xend.loc[i]
+
+            for j in range(0, len(self.xend)):
+                space2 = self.df.loc[j][self.space_col]
+                obj2   = self.df.loc[j][self.obj_col]
+                start2 = self.xstart.loc[j]
+                end2   = self.xend.loc[j]
+                
+                # Skip if already checked
+                if (j, i) in coll_pos : continue
+
+                # Collision Type 1
+                # When Person A and Person B are both in the same room
+                # And if Tstart of Person A is >= Tstart of Person B
+                # And Tend of Person A <= Tend of Person B
+                # { This means 2 different people were present at 
+                # the same time on same location }.
+                
+                # Collision Type 2
+                # When Person A and Person B are same
+                # And Room A and Room B are different
+                # And Tstart of Person B >= Tstart of Person A
+                # And Tend of Person B <= Tend of Person A
+                # {This means same person was present on 2 locations }.
+
+                if (
+                    (    
+                        (space1 == space2)
+                        and (obj1   != obj2)
+                        and (start1 >= start2)
+                        and (end1   <= end2)
+                    ) 
+                    or 
+                    (
+                        (obj1 == obj2)
+                        and (space1 != space2)
+                        and (start2 >= start1)
+                        and (end2   <= end1)
+                    )
+                ):
+                    collisions.append(
+                        {
+                            'object1' : obj1,
+                            'object2' : obj2,
+                            
+                            'event1' : space1,
+                            'event2' : space2,
+                            
+                            'start1' : start1,  
+                            'end1' : end1,
+
+                            'start2' : start2,
+                            'end2' : end2
+                        }
+                    )
+                    coll_pos.append((i, j))
+
+        return collisions
+
+
+    def generate_report(self, collisions: list) -> list:
+        report = ""
+        report += "$$$$"*16
+        report += "\n\t\tCOLLISION DETECTION REPORT\n"
+        report += "$$$$" * 16
+        report += "\n\n"
+
+        for collision in collisions:
+            report += f"{'====' * 16}\n"
+            report += f"Object:{collision['object1']} Event:{collision['event1']} Start:{collision['start1']}  End:{collision['end1']}\n"
+            report += f"Object:{collision['object2']} Event:{collision['event2']} Start:{collision['start2']}  End:{collision['end2']}\n"
+            report += f"{'====' * 16}\n"
+            
+        return report
