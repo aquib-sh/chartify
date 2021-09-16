@@ -558,7 +558,13 @@ class ChartifyAppExtended(tk.Tk):
 
         return timeseries
 
-    def draw_cut_chart(self, datatype: str, timeseries=None, figure_present=False):
+    def draw_cut_chart(
+        self,
+        datatype: str,
+        timeseries=None,
+        complete_timeseries=None,
+        figure_present=False,
+    ):
 
         if datatype not in ["time", "numerical"]:
             raise Exception("[!] datatype parameter must be 'time' or 'numerical'")
@@ -578,7 +584,9 @@ class ChartifyAppExtended(tk.Tk):
             print(dates)
 
             settings = CutChartSettings(
-                dtype=self.duration_dtype, adapter=self.adapter, dates=dates
+                dtype=self.duration_dtype,
+                adapter=self.adapter,
+                dates=complete_timeseries,
             )
             settings.start()
 
@@ -835,7 +843,8 @@ class ChartifyAppExtended(tk.Tk):
                     elif tool == "cut":
                         self.draw_cut_chart(
                             datatype="time",
-                            timeseries=complete_series,
+                            timeseries=start_times,
+                            complete_timeseries=complete_series,
                             figure_present=fig_present,
                         )
 
