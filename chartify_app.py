@@ -531,20 +531,26 @@ class ChartifyAppExtended(tk.Tk):
         _max = None
         timeseries = []
 
+        dseries = series.copy()
+        dseries = [pandas.to_datetime(d) for d in series]
+
         if self.xaxis_min != None:
             _min = self.xaxis_min
         else:
-            _min = min(series)
+            _min = min(dseries)
 
         if self.xaxis_max != None:
             _max = self.xaxis_max
         else:
-            _max = max(series)
+            _max = max(dseries)
 
-        step = datetime.timedelta(days=1)
-        _min = pandas.to_datetime(_min)
-        _max = pandas.to_datetime(_max)
+        days_to_inc = 0
+        if self.duration_dtype == "Day":
+            days_to_inc = 1
+        elif self.duration_dtype == "Week":
+            days_to_inc = 7
 
+        step = datetime.timedelta(days=days_to_inc)
         while _min <= _max:
             print(_min)
             timeseries.append(str(_min))
@@ -569,8 +575,11 @@ class ChartifyAppExtended(tk.Tk):
             slab_color = "red"
             tmap = TimelineMapper(timeseries, self.X)
             dates = tmap.get_all_dates()
+            print(dates)
 
-            settings = CutChartSettings(self.adapter, dates)
+            settings = CutChartSettings(
+                dtype=self.duration_dtype, adapter=self.adapter, dates=dates
+            )
             settings.start()
 
             selected_date = self.adapter.get("cut-chart-setting-date")
@@ -714,6 +723,7 @@ class ChartifyAppExtended(tk.Tk):
                     label_format=time_label_format,
                     min=min,
                 )
+                complete_series = self.generate_date_range(start_times)
 
                 self.X = np.arange(0, dminutes, odstep_min)
                 ax.set_xticks(self.X)
@@ -823,7 +833,6 @@ class ChartifyAppExtended(tk.Tk):
                         plt.show()
 
                     elif tool == "cut":
-                        complete_series = self.generate_date_range(start_times)
                         self.draw_cut_chart(
                             datatype="time",
                             timeseries=complete_series,
