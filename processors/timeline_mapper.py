@@ -1,3 +1,6 @@
+import pandas
+
+
 class TimelineMapper:
     """Maps timeline to actual labels on plot."""
 
@@ -46,6 +49,7 @@ class TimelineMapper:
         for i in range(0, len(map_keys)):
             map_date, map_hr, map_min = self.dissect_label(map_keys[i])
             if search_date == map_date:
+                date_matched = True
                 current_point = int(self.map[map_keys[i]])
                 # If the hour and min is same then just return the current point
                 # Otherwise calculate the increment in points
@@ -59,3 +63,17 @@ class TimelineMapper:
                     min_diff = search_min - map_min
                     current_point += hr_diff * 60 + min_diff
                     return current_point
+
+        # If date never matched then code would came to this line
+        # it means we have a date which is not present in ticks
+        # so we would have to handle it.
+        # (This will happpen only in Day and Week dtypes).
+        map_date, _, _ = self.dissect_label(map_keys[0])
+        current_point = int(self.map[map_keys[0]])
+
+        if search_date != map_date:
+            map_dt = pandas.to_datetime(map_date)
+            search_dt = pandas.to_datetime(search_date)
+            days_diff = (search_dt - map_dt).days
+            current_point = current_point + days_diff
+        return current_point
