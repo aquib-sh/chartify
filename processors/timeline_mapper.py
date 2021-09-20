@@ -29,7 +29,9 @@ class TimelineMapper:
         for i in range(0, len(self.timeline)):
             date, _, _ = self.dissect_label(self.timeline[i])
             dates.append(date)
-        return tuple(set(dates))
+        dates = list(set(dates))
+        dates.sort()
+        return dates
 
     def get_point(self, search_time: str) -> int:
         """Returns the axis point for a given time in the timeline.
