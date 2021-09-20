@@ -519,6 +519,8 @@ class ChartifyAppExtended(tk.Tk):
             jump = 120
         elif points <= 3000:
             jump = 240
+        elif points <= 5000:
+            jump = 480
         elif points <= 10000:
             jump = 1000
         elif points > 10000:
@@ -724,6 +726,7 @@ class ChartifyAppExtended(tk.Tk):
                 else:
                     time_label_format = "{dd}/{mm}/{yyyy} {hh}:{_mm}:{ss}"
 
+                breakpoint()
                 start_times = self.generate_timeseries_xaxis(
                     end=dminutes,
                     step=odstep_min,
