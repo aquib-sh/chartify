@@ -537,12 +537,12 @@ class ChartifyAppExtended(tk.Tk):
         dseries = [pandas.to_datetime(d) for d in series]
 
         if self.xaxis_min != None:
-            _min = self.xaxis_min
+            _min = pandas.to_datetime(self.xaxis_min)
         else:
             _min = min(dseries)
 
         if self.xaxis_max != None:
-            _max = self.xaxis_max
+            _max = pandas.to_datetime(self.xaxis_max)
         else:
             _max = max(dseries)
 
@@ -624,8 +624,6 @@ class ChartifyAppExtended(tk.Tk):
         self.axes.plot_surface(x, y, z, color=slab_color, alpha=alpha_value)
         # Drawing Auxillary lines and markings on intersections
         intersections = self.detect_intersection(x[0][0])
-
-        breakpoint()
 
         if len(intersections) == 0:
             print("[+] No intersections found")
@@ -839,7 +837,8 @@ class ChartifyAppExtended(tk.Tk):
                             if obj_color in stored_colors:
                                 obj_color = stored_colors[obj_color]
 
-                        plot_pos = startunits + duration / 2, y, z
+                        # plot_pos = startunits + duration / 2, y, z
+                        plot_pos = startunits, y, z
                         self.plotCubeAt(
                             pos=(plot_pos),
                             size=(duration, 0.1, 0.1),
