@@ -578,16 +578,33 @@ class ChartifyAppExtended(tk.Tk):
         slab_color = "cyan"
         alpha_value = 0.4
 
+        def dissect_label(label) -> tuple:
+            """Returns date, hour, minutes info from given label."""
+            date = label.split()[0]
+            time_parts = label.split()[1].split(":")
+            hours = time_parts[0]
+            minutes = time_parts[1]
+            return (date, int(hours), int(minutes))
+
         if datatype == "time":
             slab_color = "red"
             tmap = TimelineMapper(timeseries, self.X)
-            dates = tmap.get_all_dates()
-            print(dates)
+
+            if self.duration_dtype in ["Day", "Week"]:
+                # extract dates from timeseries
+                dates = []
+                for i in range(0, len(complete_timeseries)):
+                    date, _, _ = dissect_label(complete_timeseries[i])
+                    if date not in dates:
+                        dates.append(date)
+                dates.sort()
+            else:
+                dates = tmap.get_all_dates()
 
             settings = CutChartSettings(
                 dtype=self.duration_dtype,
                 adapter=self.adapter,
-                dates=complete_timeseries,
+                dates=dates,
             )
             settings.start()
 
@@ -607,6 +624,8 @@ class ChartifyAppExtended(tk.Tk):
         self.axes.plot_surface(x, y, z, color=slab_color, alpha=alpha_value)
         # Drawing Auxillary lines and markings on intersections
         intersections = self.detect_intersection(x[0][0])
+
+        breakpoint()
 
         if len(intersections) == 0:
             print("[+] No intersections found")
@@ -726,7 +745,6 @@ class ChartifyAppExtended(tk.Tk):
                 else:
                     time_label_format = "{dd}/{mm}/{yyyy} {hh}:{_mm}:{ss}"
 
-                breakpoint()
                 start_times = self.generate_timeseries_xaxis(
                     end=dminutes,
                     step=odstep_min,
@@ -1358,7 +1376,6 @@ class ChartifyAppExtended(tk.Tk):
             if (xpoint_of_plane >= start) and (xpoint_of_plane <= end):
                 coords = (xpoint_of_plane, pointy, pointz)
                 intersections.append(coords)
-
         return intersections
 
     def draw3d_chart(self):
