@@ -544,7 +544,7 @@ class ChartifyAppExtended(tk.Tk):
         else:
             _max = max(dseries)
 
-        days_to_inc = 0
+        days_to_inc = 1
         if self.duration_dtype == "Day":
             days_to_inc = 1
         elif self.duration_dtype == "Week":
@@ -552,7 +552,6 @@ class ChartifyAppExtended(tk.Tk):
 
         step = datetime.timedelta(days=days_to_inc)
         while _min <= _max:
-            print(_min)
             timeseries.append(str(_min))
             _min += step
 
