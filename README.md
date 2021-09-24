@@ -1,6 +1,6 @@
 # Chartify
 ## Draws 3D graphs based on 4 data points taken from a CSV or XLSX file. 
-[plain figure](/screenshots/time_and_distnace14V.csv.png?raw=true)
+[plain figure](/screenshots/time_and_distnace14V.png?raw=true)
 #### x-start, x-duration, y, z
 
 ## Features:
