@@ -1,20 +1,20 @@
 # Chartify
 ## Draws 3D graphs based on 4 data points taken from a CSV or XLSX file. 
-![plain figure](https://imgur.com/a/IXFshrK.jpg)
+[plain figure](/screenshots/time_and_distnace14V.csv.png?raw=true)
 #### x-start, x-duration, y, z
 
 ## Features:
 - Import, Edit and Export CSV, Excel sheets in the application.
-![sheet](https://imgur.com/WwNrOdI.jpg)
+![sheet](/screenshots/sheet.png?raw=true)
 - Copy paste, Cut data into cells.
 - Insert, Delete, Clear rows and columns.
 - Create multiple 3D charts based on Timedata and Numerical data by selecting different columns.
 - Cut the chart on a specific point on X axis, auxillary lines are drawn showing the position of the intersection with a plane cutting the chart and diamond shaped marker on the point of intersection.
-![cut chart](https://imgur.com/a/29aWnw8.jpg)
+![cut chart](/screenshots/cut_chart.png?raw=true)
 - Detect if there is a collision in data, that if two objects collide with their timeline.
 - Customize the application by changing fonts, colors, line colors, chart colors, font sizes, etc from Settings menu.
-![settings](https://imgur.com/a/QkJKWBm.jpg) 
-![after applying settings](https://imgur.com/a/LbhyK2L.jpg)
+![settings](/screenshots/customization.png?raw=true) 
+![after applying settings](/screenshots/customization1.png?raw=true)
 
 ## Installation
 
