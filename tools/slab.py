@@ -18,16 +18,12 @@ class Slab:
         extracted = r.group(1)
         is_equal = extracted == text
 
-        if not is_equal:
-            return float(extracted)*-1
-        return float(extracted)
+        return float(extracted) if is_equal else float(extracted)*-1
 
 
     def __find_axis_diff__(self, method):
         """Finds the difference between an axis elements."""
-        labels = []
-        for elem in method():
-            labels.append(elem.get_text())
+        labels = [elem.get_text() for elem in method()]
         first  = self.extract_num(labels[0])
         second = self.extract_num(labels[1])
         return second-first
@@ -120,7 +116,7 @@ class Slab:
         Y = []
         Z = []
 
-        for i in range(0, zlen):
+        for i in range(zlen):
             tempy = []
             temp_ystart = ystart
             tempy.append(temp_ystart-0.1)
@@ -130,9 +126,9 @@ class Slab:
             Y.append(tempy)
         Y = np.array(Y)
 
-        for i in range(0, zlen):
+        for i in range(zlen):
             tempz = []
-            for j in range(0, ylen+1):
+            for j in range(ylen+1):
                 tempz.append(zstart)
             zstart += zdiff
             Z.append(tempz)

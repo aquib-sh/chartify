@@ -59,12 +59,8 @@ class ChartifyAppExtended(tk.Tk):
         self.chart_axis_lbl_fsize = 15
         self.marker_color = "yellow"
         self.aux_line_color = "blue"
-        self.yaxis_min = None
-        self.zaxis_min = None
-        self.xaxis_min = None
-        self.yaxis_max = None
-        self.zaxis_max = None
-        self.xaxis_max = None
+        self.xaxis_min, self.yaxis_min, self.zaxis_min = None, None, None
+        self.xaxis_max, self.yaxis_max, self.zaxis_max = None, None, None
         self.cache = {"fig_bg": None, "sheet_font": None, "sheet_fsize": None}
         self.graph_coords = {"x": [], "y": [], "z": []}
         self.raw_graph_coords = {"x": [], "y": [], "z": []}
@@ -189,7 +185,7 @@ class ChartifyAppExtended(tk.Tk):
         ]
 
         # losuj pozostale kolory
-        for i in range(0, 60):
+        for i in range(60):
             random_color = list(np.random.random(size=3))
             self.colors.append(random_color)
 
@@ -221,12 +217,8 @@ class ChartifyAppExtended(tk.Tk):
         self.saver.save_cache(self.cache)
         self.choice_is_null = True
 
-        self.yaxis_min = None
-        self.zaxis_min = None
-        self.xaxis_min = None
-        self.yaxis_max = None
-        self.zaxis_max = None
-        self.xaxis_max = None
+        self.xaxis_min, self.yaxis_min, self.zaxis_min = None, None, None
+        self.xaxis_max, self.yaxis_max, self.zaxis_max = None, None, None
 
     def __straighten_list(self, elems: list) -> list:
         out = []
@@ -453,8 +445,7 @@ class ChartifyAppExtended(tk.Tk):
 
     def num_add_duration_to_start(self, val: float, duration: float) -> float:
         """Adds value to duration according to the datatype of xaxis and duration columns."""
-        res = float(val) + self.num_convert_duration(duration)
-        return res
+        return float(val) + self.num_convert_duration(duration)
 
     def set_axes_labels(self, axes, xlbl: str, ylbl: str, zlbl: str):
         """Sets the labels for the axis provided."""
@@ -1228,7 +1219,7 @@ class ChartifyAppExtended(tk.Tk):
         )
         insert_window.start()
         new_col = self.adapter.get("new_col")
-        self.df[new_col] = np.array(["" for i in range(0, len(self.df))])
+        self.df[new_col] = np.array(["" for i in range(len(self.df))])
         # Set the newly inserted data.
         df_rows = self.df.to_numpy().tolist()
         self.sheet.headers(self.df.columns.tolist())
@@ -1248,14 +1239,12 @@ class ChartifyAppExtended(tk.Tk):
         )
         insert_window.start()
 
-        vals = []
-        for row in df_cols:
-            vals.append(self.adapter.get(row))
+        vals = [self.adapter.get(row) for row in df_cols]
         self.df = self.df.append(
             pandas.DataFrame([vals], columns=df_cols), ignore_index=True
         )
 
-        for i in range(0, len(df_cols)):
+        for i in range(len(df_cols)):
             self.df[df_cols[i]] = self.df[df_cols[i]].astype(df_dtypes[i])
 
         df_rows = self.df.to_numpy().tolist()
@@ -1298,7 +1287,7 @@ class ChartifyAppExtended(tk.Tk):
         clear_window.start()
         new_col = self.adapter.get("clr_col")
         # Clear column
-        self.df[new_col] = ["" for i in range(0, len(self.df[new_col]))]
+        self.df[new_col] = ["" for i in range(len(self.df[new_col]))]
         # Set the newly modified data.
         df_rows = self.df.to_numpy().tolist()
         self.sheet.headers(self.df.columns.tolist())
@@ -1315,7 +1304,7 @@ class ChartifyAppExtended(tk.Tk):
         if self.xaxis_dtype not in ["Number", "KiloMeter", "Meter"]:
             end_time = []
             df[self.xaxis_column] = pandas.to_datetime(df[self.xaxis_column])
-            for i in range(0, len(df)):
+            for i in range(len(df)):
                 row = df.iloc[i]
                 start = row[self.xaxis_column]
                 duration = row[self.duration_column]
@@ -1326,7 +1315,7 @@ class ChartifyAppExtended(tk.Tk):
         elif self.xaxis_dtype in ["Number", "KiloMeter", "Meter"]:
             end_nums = []
             df[self.xaxis_column] = pandas.to_numeric(df[self.xaxis_column])
-            for i in range(0, len(df)):
+            for i in range(len(df)):
                 row = df.iloc[i]
                 start = row[self.xaxis_column]
                 duration = row[self.duration_column]
@@ -1366,7 +1355,7 @@ class ChartifyAppExtended(tk.Tk):
             x co-ordinate of the cutting plane.
         """
         intersections: list[tuple] = []  # list of intersecting x,y,z co-ordinates.
-        for i in range(0, len(self.cubes["start"])):
+        for i in range(len(self.cubes["start"])):
             start = self.cubes["start"][i]
             end = self.cubes["end"][i]
             pointy = self.cubes["y"][i]
