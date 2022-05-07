@@ -34,8 +34,7 @@ class CollisionDetector:
     """
 
     def __init__(self, time_start, time_end, coll_space, coll_obj):
-        self.inconsis = []
-        self.collisions = []
+        self.inconsis, self.collisions = [], []
 
         self.time_start = time_start
         self.time_end = time_end
@@ -50,11 +49,9 @@ class CollisionDetector:
         report:str
             A text report of all the collisions and inconsistencies found.
         """
-        report = ""
-        inconsis_report = ""
-        collision_report = ""
-        for i in range(0, len(self.time_start)):
-            for j in range(0, len(self.time_start)):
+        report, inconsis_report, collision_report = "", "", ""
+        for i in range(len(self.time_start)):
+            for j in range(len(self.time_start)):
 
                 if (j in self.inconsis or i in self.inconsis) or (
                     (i, j) in self.collisions or (j, i) in self.collisions
@@ -113,8 +110,7 @@ class CollisionDetector:
     def reset(self):
         """Deletes all the presents records of inconsistencies
         and collisions from list."""
-        self.inconsis = []
-        self.collisons = []
+        self.inconsis, self.collisons = [], []
 
 
 class CollisionDetectorExtended:
@@ -161,15 +157,14 @@ class CollisionDetectorExtended:
         self.obj_col = obj
 
     def detect(self):
-        collisions = []
-        coll_pos = []
-        for i in range(0, len(self.xstart)):
+        collisions, coll_pos = [], []
+        for i in range(len(self.xstart)):
             space1 = self.df.loc[i][self.space_col]
             obj1 = self.df.loc[i][self.obj_col]
             start1 = self.xstart.loc[i]
             end1 = self.xend.loc[i]
 
-            for j in range(0, len(self.xend)):
+            for j in range(len(self.xend)):
                 space2 = self.df.loc[j][self.space_col]
                 obj2 = self.df.loc[j][self.obj_col]
                 start2 = self.xstart.loc[j]
