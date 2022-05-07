@@ -203,7 +203,7 @@ class ChartifyAppExtended(tk.Tk):
         file_name = filedialog.askopenfilename(
             initialdir=start_dir,
             title="Open a file",
-            filetype=(
+            filetypes=(
                 ("csv files", "*.csv"),
                 ("xlsx files", "*.xlsx"),
                 ("all files", "*.*"),
