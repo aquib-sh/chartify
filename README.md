@@ -34,4 +34,6 @@ To run:
 ```
 python chartify_app.py
 ```
+> Note: for Archlinux users you need to install tk manually by running
+`sudo pacman -S tk`
 
