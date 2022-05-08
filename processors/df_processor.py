@@ -1,8 +1,10 @@
 import sys
+
 sys.path.append("../")
 import pandas
 import numpy
 from chartify.processors.processor import DataProcessor
+
 
 class DataFrameProcessor(DataProcessor):
     """DataFrameProcessor
@@ -11,7 +13,8 @@ class DataFrameProcessor(DataProcessor):
     from various file formats to be inherited form it.
     Parent Class : DataProcessor.
     """
-    def __init__(self, filepath:str):
+
+    def __init__(self, filepath: str):
         self.filepath = filepath
         self.df = pandas.DataFrame()
 
@@ -28,7 +31,8 @@ class DataFrameProcessor(DataProcessor):
 
     def is_column_present(self, _key) -> bool:
         """Check if column is present in DataFrame"""
-        if _key in self.df : return True
+        if _key in self.df:
+            return True
         return False
 
     def get_column_series(self, _key) -> pandas.core.series.Series:

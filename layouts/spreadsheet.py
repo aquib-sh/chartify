@@ -1,5 +1,5 @@
-#Author : Shaikh Aquib
-#Date : June 2021
+# Author : Shaikh Aquib
+# Date : June 2021
 
 from tkinter import ttk
 import tkinter as tk
@@ -15,16 +15,17 @@ class Spreadsheet(ttk.Treeview):
     -------
     get_available_themes() -> tuple:
         returns current available themes on system.
-        
+
     set_theme(theme_name:str)
         sets the theme for spreadsheet.
-        
+
     set_columns(columns:tuple)
         sets the columns for spreadsheet.
 
     add_rows(data:list)
         adds data to the spreadsheet.
     """
+
     def __init__(self, master=None):
         """
         Parameters
@@ -36,31 +37,24 @@ class Spreadsheet(ttk.Treeview):
 
         # Set theme for spreadsheet
         self.style = ttk.Style(master)
-        self.theme = 'clam'
+        self.theme = "clam"
         self.style.theme_use(self.theme)
 
-        self.verscrlbar = ttk.Scrollbar(master, 
-                           orient ="vertical", 
-                           command = self.yview)
-        self.verscrlbar.pack(side ='right', fill ='y')
+        self.verscrlbar = ttk.Scrollbar(master, orient="vertical", command=self.yview)
+        self.verscrlbar.pack(side="right", fill="y")
 
-        self.horscrlbar = ttk.Scrollbar(master, 
-                           orient ="horizontal", 
-                           command = self.xview)
-        self.horscrlbar.pack(side ='bottom', fill ='x')
+        self.horscrlbar = ttk.Scrollbar(master, orient="horizontal", command=self.xview)
+        self.horscrlbar.pack(side="bottom", fill="x")
 
         self.configure(
-            yscrollcommand = self.verscrlbar.set,
-            xscrollcommand = self.horscrlbar.set
+            yscrollcommand=self.verscrlbar.set, xscrollcommand=self.horscrlbar.set
         )
-
 
     def get_available_themes(self) -> tuple:
         """Returns available theme names on system."""
         return self.style.theme_names()
 
-
-    def set_theme(self, theme_name:str):
+    def set_theme(self, theme_name: str):
         """Sets theme of spreadsheet.
 
         Parameters
@@ -72,8 +66,7 @@ class Spreadsheet(ttk.Treeview):
         if theme_name in available_themes:
             self.style.theme_use(theme_name)
 
-
-    def set_columns(self, columns:tuple):
+    def set_columns(self, columns: tuple):
         """Sets the columns of spreadsheet.
 
         Parameters
@@ -81,14 +74,13 @@ class Spreadsheet(ttk.Treeview):
         columns : tuple
             columns of spreadsheet
         """
-        self['columns'] = columns
-        self['show'] = 'headings'
+        self["columns"] = columns
+        self["show"] = "headings"
         for i in range(0, len(columns)):
             self.column(columns[i], width=300, minwidth=100, anchor=tk.CENTER)
             self.heading(columns[i], text=columns[i])
-            
 
-    def add_rows(self, rows:list):
+    def add_rows(self, rows: list):
         """Adds row data to the spreadsheet.
 
         Parameters
@@ -97,16 +89,14 @@ class Spreadsheet(ttk.Treeview):
             list of tuples containing the data for rows
         """
         for i in range(0, len(rows)):
-            self.insert("", 'end', values=rows[i])
-
+            self.insert("", "end", values=rows[i])
 
     def clear_sheet(self):
         """Clears up everything on the sheet."""
         for item in self.get_children():
             self.delete(item)
 
-
-    def insert_column(self, column_name:str):
+    def insert_column(self, column_name: str):
         """Inserts a column into spreadsheet.
 
         Parameters
@@ -115,8 +105,8 @@ class Spreadsheet(ttk.Treeview):
             Name of the column to be added.
         """
         new_column_list = []
-        for i in range(0, len(self['columns'])):
-            new_column_list.append(self['columns'][i])
+        for i in range(0, len(self["columns"])):
+            new_column_list.append(self["columns"][i])
         new_column_list.append(column_name)
         new_column_tup = tuple(new_column_list)
 
@@ -124,5 +114,3 @@ class Spreadsheet(ttk.Treeview):
         self.set_columns(new_column_tup)
 
         return new_column_tup
-
-
