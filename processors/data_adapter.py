@@ -1,5 +1,6 @@
 class DataAdapter:
     """Used for exchanging data between different objects and windows."""
+
     def __init__(self):
         self._dict = {}
 
@@ -7,11 +8,13 @@ class DataAdapter:
         self._dict[_key] = _value
 
     def get(self, _key):
-        if _key not in self._dict : raise KeyError(f"{_key} not found")
+        if _key not in self._dict:
+            raise KeyError(f"{_key} not found")
         return self._dict[_key]
 
     def delete(self, _key):
-        if _key not in self._dict: raise KeyError(f"{_key} not found")
+        if _key not in self._dict:
+            raise KeyError(f"{_key} not found")
         del self._dict[_key]
 
     def keys(self):
@@ -31,6 +34,7 @@ class DataAdapter:
         keys = self.keys()
         values = self.values()
         adapter_len = self.adapter_length()
-        for i in range(adapter_len) : _str += f"{keys[i]:<30}:\t{values[i]}, \n"
+        for i in range(adapter_len):
+            _str += f"{keys[i]:<30}:\t{values[i]}, \n"
         _str += "}"
         return _str

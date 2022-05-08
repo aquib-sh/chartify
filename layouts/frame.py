@@ -1,7 +1,8 @@
-#Author : Shaikh Aquib
-#Date : June 2021
+# Author : Shaikh Aquib
+# Date : June 2021
 
 import tkinter as tk
+
 
 class WindowFrame(tk.Frame):
     """A class for creating and managing frames.

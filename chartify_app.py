@@ -70,7 +70,7 @@ class ChartifyAppExtended(tk.Tk):
         self.color_cache = CacheProcessor("colors.db", "colors")
         self.retriever = CacheRetriever()
 
-        if sys.platform=="win32":
+        if sys.platform == "win32":
             self.iconbitmap("icon.ico")
 
         if self.retriever.cache_exists():
